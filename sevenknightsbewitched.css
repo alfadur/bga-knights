@@ -1,0 +1,214 @@
+/**
+ *------
+ * BGA framework: © Gregory Isabelli <gisabelli@boardgamearena.com> & Emmanuel Colin <ecolin@boardgamearena.com>
+ * SevenKnightsBewitched implementation : © <Your name here> <Your email address here>
+ *
+ * This code has been produced on the BGA studio platform for use on http://boardgamearena.com.
+ * See http://en.boardgamearena.com/#!doc/Studio for more information.
+ * -----
+ *
+ * sevenknightsbewitched.css
+ *
+ * SevenKnightsBewitched stylesheet
+ *
+ */
+
+#mur-play-area {
+    --play-width: 720px;
+    --tile-width: 50px;
+    --tile-height: 120px;
+    --tile-depth: 5px;
+    position: relative;
+    max-width: var(--play-width);
+    aspect-ratio: 1;
+}
+
+#mur-background {
+    pointer-events: none;
+}
+
+#mur-background, #mur-background rect {
+    width: 100%;
+    height: 100%;
+}
+
+#mur-background pattern line {
+    stroke: #ac9c52;
+    stroke-width: 2px;
+}
+
+#mur-background rect {
+    fill: url(#mur-background-pattern);
+    fill-opacity: 0.2;
+}
+
+.mur-tile {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    margin: auto;
+    width: var(--tile-width);
+    height: var(--tile-height);
+    transform-origin: center;
+    transition:
+            transform 600ms ease-in-out,
+            box-shadow 300ms ease-out;
+    perspective: 200px;
+    perspective-origin: center;
+}
+
+.mur-tile:hover {
+    box-shadow: 0 0 12px cornflowerblue;
+}
+
+.mur-tile:after {
+    content: "";
+    opacity: 0;
+    transition: opacity 1000ms ease-out;
+}
+
+.mur-tile.mur-owned:after {
+    position: absolute;
+    width: 15px;
+    height: 15px;
+    right: 5px;
+    top: 5px;
+    border-radius: 10px;
+    box-shadow: 0 1px 2px black;
+    opacity: 1;
+    transform-origin: center;
+    background: red;
+}
+
+.mur-tile.mur-owned[data-player-color="0"]:after {
+    background: green;
+}
+
+.mur-tile.mur-flipped:after {
+    animation-name: mur-bounce-forward;
+    animation-duration: 1000ms;
+    animation-timing-function: ease-out;
+    animation-fill-mode: forwards;
+}
+
+@keyframes mur-bounce-backward {
+    50% {
+        transform: scale(1.5) translate(-3px, -75%);
+    }
+    to {
+        transform: none;
+    }
+}
+
+@keyframes mur-bounce-forward {
+    50% {
+        transform: scale(1.5) translate(-5px, -75%);
+    }
+    to {
+        transform: translate(-15px);
+    }
+}
+
+.mur-tile:not(.mur-dealt) {
+    transform: translateY(calc(-10px * var(--index)));
+}
+
+.mur-tile.mur-dealt {
+    transform:
+            rotate(calc(var(--index) / var(--player-count) * 360deg))
+            translate(calc(var(--play-width) / 2 - 60px))
+            rotate(calc(var(--index) / var(--player-count) * -360deg));
+}
+
+.mur-tile-front, .mur-tile-side, .mur-tile-back {
+    position: absolute;
+    transition: transform 800ms ease-in-out;
+    perspective: 100px;
+    transform-style: preserve-3d;
+    transform-origin: center;
+}
+
+.mur-tile-front, .mur-tile-back {
+    width: 100%;
+    height: 100%;
+    backface-visibility: hidden;
+    box-shadow: 0 1px 2px black;
+}
+
+.mur-tile-front {
+    transform:
+            rotateY(180deg)
+            translateZ(calc(var(--tile-depth) / 2));
+    background-image: url("img/knights.png");
+    background-size:
+            calc(var(--tile-width) * 7)
+            var(--tile-height);
+    background-position: calc(var(--index) * var(--tile-width) * -1);
+}
+
+.mur-tile.mur-flipped .mur-tile-front {
+    transform:
+            rotateY(0deg)
+            translateZ(calc(var(--tile-depth) / 2));
+}
+
+.mur-tile-side {
+    width: var(--tile-depth);
+    height: 100%;
+    background: darkgray;
+    transform:
+            translateX(calc((var(--tile-width) - var(--tile-depth)) / 2))
+            rotateY(90deg)
+            translateZ(calc(var(--tile-width) / 2));
+}
+
+.mur-tile.mur-flipped .mur-tile-side {
+    transform:
+            translateX(calc((var(--tile-width) - var(--tile-depth)) / 2))
+            rotateY(-90deg)
+            translateZ(calc(var(--tile-width) / 2));
+}
+
+.mur-tile-back {
+    transform:
+            rotateY(0deg)
+            translateZ(calc(var(--tile-depth) / 2));
+    background: lightgray;
+}
+
+.mur-tile.mur-flipped .mur-tile-back {
+    transform:
+            rotateY(-180deg)
+            translateZ(calc(var(--tile-depth) / 2));
+}
+
+#mur-deployment {
+    position: absolute;
+    left: 0; top: 0; right: 0; bottom: 0;
+    margin: auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+}
+
+.mur-placeholder {
+    position: relative;
+    flex: 0 0 auto;
+    width: var(--tile-width);
+    height: var(--tile-height);
+    outline: dotted #c8b05d 4px;
+}
+
+.mur-placeholder:after {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    text-align: center;
+    line-height: var(--tile-height);
+    content: attr(data-number);
+    color: tan;
+    opacity: 0.35;
+    font-size: 42px;
+    font-family: "Arial Black", sans-serif;
+    font-weight: bolder;
+}
