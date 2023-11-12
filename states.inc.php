@@ -69,16 +69,16 @@ $machinestates = [
     State::INSPECT => [
         Fsm::NAME => "inspect",
         Fsm::TYPE => FsmType::SINGLE_PLAYER,
-        Fsm::DESCRIPTION => clienttranslate('${player_name} must inspect another player\'s tile)'),
-        Fsm::OWN_DESCRIPTION => clienttranslate('${you} must inspect another player\'s tile)'),
+        Fsm::DESCRIPTION => clienttranslate('${actplayer} must inspect another player\'s tile'),
+        Fsm::OWN_DESCRIPTION => clienttranslate('${you} must inspect another player\'s tile'),
         Fsm::POSSIBLE_ACTIONS => ['inspect'],
-        Fsm::TRANSITIONS => ['inspect' => State::DISPATCH_ACTION]
+        Fsm::TRANSITIONS => ['' => State::DISPATCH_ACTION]
     ],
 
     State::QUESTION => [
         Fsm::NAME => 'question',
         Fsm::TYPE => FsmType::SINGLE_PLAYER,
-        Fsm::DESCRIPTION => clienttranslate('${player_name} must ask another player a question'),
+        Fsm::DESCRIPTION => clienttranslate('${actplayer} must ask another player a question'),
         Fsm::OWN_DESCRIPTION => clienttranslate('${you} must ask another player a question'),
         Fsm::POSSIBLE_ACTIONS => ['ask'],
         Fsm::TRANSITIONS => ['ask' => State::ANSWER]
@@ -87,7 +87,7 @@ $machinestates = [
     State::ANSWER => [
         Fsm::NAME => 'answer',
         Fsm::TYPE => FsmType::SINGLE_PLAYER,
-        Fsm::DESCRIPTION => clienttranslate('${player_name} must answer the question'),
+        Fsm::DESCRIPTION => clienttranslate('${actplayer} must answer the question'),
         Fsm::OWN_DESCRIPTION => clienttranslate('${you} must answer the question'),
         Fsm::POSSIBLE_ACTIONS => ['answer'],
         Fsm::TRANSITIONS => ['answer' => State::DISPATCH_ACTION]
@@ -129,7 +129,7 @@ $machinestates = [
     State::DEPLOY_KNIGHTS => [
         Fsm::NAME => 'deployKnights',
         Fsm::TYPE => FsmType::SINGLE_PLAYER,
-        Fsm::DESCRIPTION => clienttranslate('${player_name} must choose a knight to deploy to position ${n}'),
+        Fsm::DESCRIPTION => clienttranslate('${actplayer} must choose a knight to deploy to position ${n}'),
         Fsm::OWN_DESCRIPTION => clienttranslate('${you} must choose a knight to deploy to position ${n}'),
         Fsm::ARGUMENTS => 'argDeployKnights',
         Fsm::TRANSITIONS => [

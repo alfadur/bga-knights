@@ -59,8 +59,35 @@ class SevenKnightsBewitched extends Table
         self::reattributeColorsBasedOnPreferences($players, $data['player_colors']);
         self::reloadPlayersBasicInfos();
 
+        self::setupPlayers(self::loadPlayersBasicInfos(), $data['player_colors'], false);
+
+        $captain = (int)self::getUniqueValueFromDb(<<<EOF
+            SELECT player_id AS id FROM player
+            ORDER BY player_no ASC
+            LIMIT 1
+            EOF);
         self::setGameStateInitialValue(Globals::ACTIONS_TAKEN, 0);
-        self::setGameStateInitialValue(Globals::CAPTAIN, 0);
+        self::setGameStateInitialValue(Globals::CAPTAIN, $captain);
+    }
+
+    static function setupPlayers(array $players, array $colors, bool $tutorial): void
+    {
+        $values = [];
+        $characters = range($tutorial ? 1 : 0, count($players) - 1);
+        shuffle($characters);
+
+        foreach ($players as $playerId => ['player_color' => $color]) {
+            $character = array_shift($characters);
+            $token = array_search($color, $colors);
+            $values[] = "($playerId, $character, $token)";
+        }
+
+        $args = implode(',', $values);
+        self::DbQuery(<<<EOF
+            INSERT INTO player_status
+                (player_id, `character`, token)
+            VALUES $args
+            EOF);
     }
 
     function getGameProgression()
@@ -70,7 +97,37 @@ class SevenKnightsBewitched extends Table
 
     protected function getAllDatas()
     {
-        return [];
+        $currentPlayerId = self::getCurrentPlayerId();
+
+        $fullPlayers = self::getCollectionFromDb(<<<EOF
+            SELECT player_id AS id, player_score AS score, 
+                   player_name AS name, player_color AS color, 
+                   player_no AS no, `character`, token, inspected
+            FROM player NATURAL JOIN player_status
+            EOF);
+        $players = [];
+
+        foreach ($fullPlayers as $playerId => $fullPlayer) {
+            $players[$playerId] = [
+                'id' => $playerId,
+                'name' => $fullPlayer['name'],
+                'no' => $fullPlayer['no'],
+                'color' => $fullPlayer['color'],
+                'score' => $fullPlayer['score'],
+                'token' => $fullPlayer['token'],
+            ];
+        }
+
+        $players[$currentPlayerId]['character'] =
+            $fullPlayers[$currentPlayerId]['character'];
+        $inspectedId = $fullPlayers[$currentPlayerId]['inspected'];
+
+        if ($inspectedId !== null) {
+            $players[$inspectedId]['character'] =
+                $fullPlayers[$inspectedId]['character'];
+        }
+
+        return ['players' => $players];
     }
 
     function inspect(int $playerId): void
@@ -83,8 +140,10 @@ class SevenKnightsBewitched extends Table
                 SET inspected = $playerId
                 WHERE player_id = $activePlayerId  
                 EOF);
-            self::incGamestateValue(Globals::ACTIONS_TAKEN, 1);
-            $this->gamestate->nextState('inspect');
+            if (self::DbAffectedRow() > 0) {
+                self::incGamestateValue(Globals::ACTIONS_TAKEN, 1);
+                $this->gamestate->nextState('');
+            }
         }
     }
 
@@ -144,7 +203,10 @@ class SevenKnightsBewitched extends Table
 
     function stDealTiles(): void
     {
-
+        self::notifyAllPlayers('tiles', clienttranslate('Tiles are dealt'), []);
+        $captain = self::getGameStateValue(Globals::CAPTAIN);
+        $this->gamestate->changeActivePlayer($captain);
+        $this->gamestate->nextState('');
     }
 
     function stAppoint(): void

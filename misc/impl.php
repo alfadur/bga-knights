@@ -8,6 +8,7 @@ class GameState {
     function prevState(string $transition): void {}
     function jumpToState(int $state): void {}
     function checkPossibleAction(string $action): void {}
+    function changeActivePlayer(string $playerId): void {}
     function setAllPlayersMultiactive(): void {}
     function setPlayersMultiactive(array $players, string $stateTransition, bool $overwrite = false): void {}
     function setPlayerNonMultiactive(string $player, string $stateTransition): void {}
@@ -34,10 +35,11 @@ class Table {
     static function isSpectator(): bool { return false; }
     static function isCurrentPlayerZombie(): bool { return false; }
     static function activeNextPlayer(): void {}
+    static function activePrevPlayer(): void {}
     static function DbQuery(string $query): void {}
     static function DbAffectedRow(): int { return 0; }
     static function getCollectionFromDb(string $query, bool $singleColumn = false): array { return []; }
-    static function getObjectFromDb(string $query): ?object { return null; }
+    static function getObjectFromDb(string $query): ?array { return null; }
     static function getObjectListFromDb(string $query, bool $singleColumn = false): array { return []; }
     static function getUniqueValueFromDb(string $query): ?string { return null; }
 
