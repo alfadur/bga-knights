@@ -42,6 +42,7 @@ class SevenKnightsBewitched extends Table
     {
         $data = self::getGameinfos();
         $defaultColors = $data['player_colors'];
+        shuffle($defaultColors);
         $playerValues = [];
 
         foreach ($players as $playerId => $player) {
@@ -141,10 +142,34 @@ class SevenKnightsBewitched extends Table
                 WHERE player_id = $activePlayerId  
                 EOF);
             if (self::DbAffectedRow() > 0) {
+                $playerName = self::getPlayerNameById($activePlayerId);
+                $targetName = self::getPlayerNameById($playerId);
+                self::notifyAllPlayers('message', clienttranslate('${player_name1} inspects ${player_name2}\'s tile'), [
+                    'player_name1' => $playerName,
+                    'player_name2' => $targetName
+                ]);
+
+                $character = self::getUniqueValueFromDb(<<<EOF
+                    SELECT `character` FROM player_status
+                    WHERE player_id = $playerId
+                    EOF);
+                $message = $character === "0" ?
+                    clienttranslate('${player_name} turns out to be ${tileIcon}. You are now bewitched!') :
+                    clienttranslate('${player_name} turns out to be ${tileIcon}');
+                self::notifyPlayer($activePlayerId, 'inspect', $message, [
+                    'player_name' => $targetName,
+                    'playerId' => $playerId,
+                    'character' => $character,
+                    'tileIcon' => $character,
+                    'preserve' => ['tileIcon']
+                ]);
+
                 self::incGamestateValue(Globals::ACTIONS_TAKEN, 1);
                 $this->gamestate->nextState('');
+                return;
             }
         }
+        throw new BgaUserException('Invalid player');
     }
 
     function ask(int $playerId, int $questionType, array $questionArgs)
@@ -220,7 +245,7 @@ class SevenKnightsBewitched extends Table
         $actionsTaken = self::getGameStateValue(Globals::ACTIONS_TAKEN);
         if ($actionsTaken >= 2 * $playersCount) {
             $this->gamestate->nextState('vote');
-        } else if ($actionsTaken > $playersCount) {
+        } else if ($actionsTaken >= $playersCount) {
             self::activeNextPlayer();
             $this->gamestate->nextState('question');
         } else {

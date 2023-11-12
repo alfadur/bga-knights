@@ -50,7 +50,7 @@ class Table {
     static function getGameStateValue(string $name): string { return ''; }
     static function checkAction(string $action): void {}
     static function notifyAllPlayers(string $name, string $text, array $args): void {}
-    static function notifyPlayers(string $playerId, string $name, string $text, array $args): void {}
+    static function notifyPlayer(string $playerId, string $name, string $text, array $args): void {}
 }
 
 class game_view_page {

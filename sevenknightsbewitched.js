@@ -28,7 +28,7 @@ function createPlayer(index, angle, playerId, playerName, playerColor) {
     const radians = angle / 180 * Math.PI;
     const coords = [Math.cos(radians), -Math.sin(radians)];
     const style = `--index: ${index}; --cx: ${coords[0]}; --cy: ${coords[1]}`;
-    return `<div class="mur-player" style="${style}" data-player="${playerId}">
+    return `<div id="mur-player-${playerId}" class="mur-player" style="${style}" data-player="${playerId}">
         <div class="mur-player-name" style="color: #${playerColor}">${playerName}</div>
     </div>`;
 }
@@ -74,9 +74,15 @@ define([
 
         const playArea = document.getElementById("mur-play-area");
 
-        for (const playerId of Object.keys(players)) {
+        const currentIndex = parseInt(players[this.getCurrentPlayerId().toString()].no) - 1
+
+        function sortKey(player) {
+            return (parseInt(player.no) - 1 - currentIndex + playerCount) % playerCount;
+        }
+
+        for (const playerId of playerIds) {
             const player = players[playerId];
-            const index = parseInt(player.no) - 1;
+            const index = sortKey(player);
             const angle = 90 + index * 360 / playerCount;
 
             const playerArea = createElement(playArea,
@@ -184,5 +190,13 @@ define([
 
     setupNotifications() {
         console.log("notifications subscriptions setup");
+        dojo.subscribe('inspect', this, data => {
+            console.log(data);
+            const tile = document.querySelector(`#mur-player-${data.args.playerId} .mur-tile`);
+            tile.style.setProperty("--character", data.args.character);
+            tile.classList.add("mur-flipped");
+        });
+
+        this.notifqueue.setSynchronous('inspect', 500);
     }
 }));
