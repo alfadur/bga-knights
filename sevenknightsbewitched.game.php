@@ -183,8 +183,10 @@ class SevenKnightsBewitched extends Table
                 SET asked = $playerId AND question = $questionJson 
                 WHERE player_id = $activePlayerId
                 EOF);
-            $this->gamestate->nextState('ask');
+            $this->gamestate->nextState('');
+            return;
         }
+        throw new BgaUserException('Invalid player');
     }
 
     function answer(int $answer): void

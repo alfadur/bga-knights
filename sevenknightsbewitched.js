@@ -55,6 +55,13 @@ function createPlaceholder(index) {
     return `<div class="mur-placeholder" data-number="${index + 1}"></div>`
 }
 
+function createQuestionDialog() {
+    const askText = _("Ask");
+    return `<div>
+        <div id="mur-question-dialog-ask" class="bgabutton bgabutton_blue">${askText}</div>
+    </div>`;
+}
+
 define([
     "dojo","dojo/_base/declare",
     "ebg/core/gamegui",
@@ -119,7 +126,8 @@ define([
 
         if (this.isCurrentPlayerActive()) {
             switch (stateName) {
-                case "inspect": {
+                case "inspect":
+                case "question": {
                     for (const tile of document.querySelectorAll(".mur-tile")) {
                         tile.classList.add("mur-selectable");
                     }
@@ -134,7 +142,8 @@ define([
 
         if (this.isCurrentPlayerActive()) {
             switch (stateName) {
-                case "inspect": {
+                case "inspect":
+                case "question": {
                     clearTag("mur-selectable");
                     this.selectTile(null);
                     break;
@@ -185,6 +194,23 @@ define([
         if (this.checkAction("inspect", true)) {
             document.getElementById("mur-inspect").classList.toggle(
                 "disabled", !this.selectTile(tile));
+        } else if (this.checkAction("ask", true)) {
+            if (this.selectTile(tile)) {
+                const dialog = new ebg.popindialog();
+                dialog.create("mur-question-dialog");
+                dialog.setTitle(_("Choose a question"));
+                dialog.setContent(createQuestionDialog());
+                dialog.show();
+                document.getElementById("mur-question-dialog-ask").addEventListener('click', event => {
+                    event.stopPropagation();
+                    this.request("ask", {
+                        playerId: tile.parentElement.dataset.player,
+                        questionType: 0
+                    }, () => {
+                        dialog.destroy();
+                    });
+                });
+            }
         }
     },
 

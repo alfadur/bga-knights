@@ -81,7 +81,7 @@ $machinestates = [
         Fsm::DESCRIPTION => clienttranslate('${actplayer} must ask another player a question'),
         Fsm::OWN_DESCRIPTION => clienttranslate('${you} must ask another player a question'),
         Fsm::POSSIBLE_ACTIONS => ['ask'],
-        Fsm::TRANSITIONS => ['ask' => State::ANSWER]
+        Fsm::TRANSITIONS => ['' => State::ANSWER]
     ],
 
     State::ANSWER => [
