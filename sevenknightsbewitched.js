@@ -33,8 +33,18 @@ function createPlayer(index, angle, playerId, playerName, playerColor) {
     </div>`;
 }
 
-function createTile() {
-    return `<div class="mur-tile">
+function createTile(token, character) {
+    console.log("token", token);
+    let settings = [];
+    if (token !== undefined) {
+        token = parseInt(token);
+        settings.push(`--token-x: ${token % 4}; --token-y: ${Math.floor(token / 4)}`);
+    }
+    if (character !== undefined) {
+       settings.push(`--character: ${character}"`);
+    }
+    const style = settings.join("; ");
+    return `<div class="mur-tile" style="${style}">
         <div class="mur-tile-back"></div>                
         <div class="mur-tile-front"></div>
         <div class="mur-tile-side"></div>
@@ -71,7 +81,14 @@ define([
 
             const playerArea = createElement(playArea,
                 createPlayer(index, angle, player.id, player.name, player.color));
-            const tile = createElement(playerArea, createTile());
+            const tile = createElement(playerArea,
+                createTile(player.token, player.character));
+
+            tile.classList.add("mur-owned");
+            if ("character" in player) {
+                tile.classList.add("mur-flipped");
+            }
+
             console.log("New tile", tile);
             tile.addEventListener('click', event => {
                 event.stopPropagation();
@@ -79,6 +96,12 @@ define([
                 this.onTileClick(tile);
             })
         }
+
+        Array.from(document.querySelectorAll(" .mur-placeholder")).forEach((place, index) => {
+            if (index >= playerCount - 1) {
+                createElement(place, createTile(undefined, index)).classList.add("mur-flipped");
+            }
+        });
 
         this.setupNotifications();
 

@@ -23,7 +23,6 @@
     position: relative;
     width: var(--play-width);
     height: calc(var(--play-width) * 3 / 4);
-    /*border: 10px solid black;*/
 }
 
 .mur-player {
@@ -35,7 +34,6 @@
     height: var(--player-size);
     left: calc((100% - var(--player-size)) * (1 - var(--cx)) / 2);
     top: calc((100% - var(--player-size)) * (1 - var(--cy)) / 2);
-    /*background-color: red;*/
 }
 
 .mur-player-name {
@@ -47,6 +45,11 @@
 
 .mur-tile {
     --index: 0;
+    --character: 0;
+    --token-size: 18px;
+    --token-x: 0;
+    --token-y: 0;
+
     position: absolute;
     left: 0; top: 0; right: 0; bottom: 0;
     margin: auto;
@@ -76,19 +79,21 @@
 
 .mur-tile.mur-owned:after {
     position: absolute;
-    width: 15px;
-    height: 15px;
+    width: var(--token-size);
+    height: var(--token-size);
     right: 5px;
-    top: 5px;
-    border-radius: 10px;
+    top: 4px;
+    border-radius: 12px;
     box-shadow: 0 1px 2px black;
     opacity: 1;
     transform-origin: center;
-    background: red;
-}
-
-.mur-tile.mur-owned[data-player-color="0"]:after {
-    background: green;
+    background-image: url("img/tokens.jpg");
+    background-size:
+        calc(var(--token-size) * 4)
+        calc(var(--token-size) * 2);
+    background-position:
+        calc(var(--token-size) * var(--token-x) * -1)
+        calc(var(--token-size) * var(--token-y) * -1);
 }
 
 .mur-tile.mur-flipped:after {
@@ -112,7 +117,7 @@
         transform: scale(1.5) translate(-5px, -75%);
     }
     to {
-        transform: translate(-15px);
+        transform: translate(-21px);
     }
 }
 
@@ -148,9 +153,9 @@
             translateZ(calc(var(--tile-depth) / 2));
     background-image: url("img/knights.jpg");
     background-size:
-            calc(var(--tile-width) * 7)
+            calc(var(--tile-width) * 9)
             var(--tile-height);
-    background-position: calc(var(--index) * var(--tile-width) * -1);
+    background-position: calc(var(--character) * var(--tile-width) * -1);
 }
 
 .mur-tile.mur-flipped .mur-tile-front {
@@ -180,7 +185,11 @@
     transform:
             rotateY(0deg)
             translateZ(calc(var(--tile-depth) / 2));
-    background: lightgray;
+    background-image: url("img/knights.jpg");
+    background-size:
+        calc(var(--tile-width) * 9)
+        var(--tile-height);
+    background-position: calc(-8 * var(--tile-width));
 }
 
 .mur-tile.mur-flipped .mur-tile-back {
