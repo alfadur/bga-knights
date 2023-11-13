@@ -15,7 +15,10 @@ CREATE TABLE IF NOT EXISTS player_status(
     `character` TINYINT UNSIGNED NOT NULL,
     `token` TINYINT UNSIGNED NOT NULL,
     `answer` TINYINT NULL,
-    `question` JSON NULL,
+    `question` TINYINT NULL,
     PRIMARY KEY(`player_id`),
-    FOREIGN KEY(`player_id`) REFERENCES `player`(`player_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 AUTO_INCREMENT=1;
+    FOREIGN KEY(`player_id`) REFERENCES `player`(`player_id`),
+    FOREIGN KEY(`inspected`) REFERENCES `player`(`player_id`),
+    FOREIGN KEY(`asked`) REFERENCES `player`(`player_id`),
+    FOREIGN KEY(`voted`) REFERENCES `player`(`player_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;

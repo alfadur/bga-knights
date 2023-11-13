@@ -41,7 +41,7 @@ function createTile(token, character) {
         settings.push(`--token-x: ${token % 4}; --token-y: ${Math.floor(token / 4)}`);
     }
     if (character !== undefined) {
-       settings.push(`--character: ${character}"`);
+       settings.push(`--character: ${character}`);
     }
     const style = settings.join("; ");
     return `<div class="mur-tile" style="${style}">
@@ -56,9 +56,15 @@ function createPlaceholder(index) {
 }
 
 function createQuestionDialog() {
-    const askText = _("Ask");
+    const questionText = _("Is your number one of...");
+    const numbers = [1, 2, 3, 4, 5, 6, 7].map(n =>
+        `<div class="mur-single-number" data-number="${n}"></div>`);
     return `<div>
-        <div id="mur-question-dialog-ask" class="bgabutton bgabutton_blue">${askText}</div>
+        <div class="mur-question-text">${questionText}</div>
+        <div class="mur-number-list">
+            ${numbers.join("")}
+        </div>
+        <div id="mur-question-dialog-buttons"></div>        
     </div>`;
 }
 
@@ -112,7 +118,7 @@ define([
 
         Array.from(document.querySelectorAll(" .mur-placeholder")).forEach((place, index) => {
             if (index >= playerCount - 1) {
-                createElement(place, createTile(undefined, index)).classList.add("mur-flipped");
+                createElement(place, createTile(undefined, index + 1)).classList.add("mur-flipped");
             }
         });
 
@@ -190,26 +196,49 @@ define([
         return false;
     },
 
+    questionDialog(tile) {
+        const dialog = new ebg.popindialog();
+        dialog.create("mur-question-dialog");
+        dialog.setTitle(_("Choose a question"));
+        dialog.setContent(createQuestionDialog());
+        dialog.show();
+
+        function ask() {
+            let values = 0;
+            for (const number of document.querySelectorAll(".mur-single-number.mur-selected")) {
+                values = values | (0x1 << (parseInt(number.dataset.number) - 1));
+            }
+
+            this.request("ask", {
+                playerId: tile.parentElement.dataset.player,
+                values
+            }, () => {
+                dialog.destroy();
+            });
+        }
+
+        this.addActionButton("mur-question-dialog-ask", _("Ask"), ask, "mur-question-dialog-buttons");
+        const askButton = document.getElementById("mur-question-dialog-ask");
+        askButton.classList.add("disabled");
+
+        for (const number of document.querySelectorAll(".mur-single-number")) {
+            number.addEventListener("click", event => {
+                event.stopPropagation();
+                number.classList.toggle("mur-selected");
+                const selectionSize = document.querySelectorAll(".mur-single-number.mur-selected").length;
+                askButton.classList.toggle("disabled", selectionSize % 7 === 0);
+            });
+        }
+    },
+
     onTileClick(tile) {
         if (this.checkAction("inspect", true)) {
             document.getElementById("mur-inspect").classList.toggle(
                 "disabled", !this.selectTile(tile));
         } else if (this.checkAction("ask", true)) {
             if (this.selectTile(tile)) {
-                const dialog = new ebg.popindialog();
-                dialog.create("mur-question-dialog");
-                dialog.setTitle(_("Choose a question"));
-                dialog.setContent(createQuestionDialog());
-                dialog.show();
-                document.getElementById("mur-question-dialog-ask").addEventListener('click', event => {
-                    event.stopPropagation();
-                    this.request("ask", {
-                        playerId: tile.parentElement.dataset.player,
-                        questionType: 0
-                    }, () => {
-                        dialog.destroy();
-                    });
-                });
+                this.selectTile(null);
+                this.questionDialog(tile);
             }
         }
     },

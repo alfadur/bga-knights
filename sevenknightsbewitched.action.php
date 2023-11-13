@@ -47,8 +47,8 @@ class action_sevenknightsbewitched extends APP_GameAction
     {
         self::setAjaxMode();
         $playerId = self::getArg('playerId', AT_posint, true);
-        $questionType = self::getArg('questionType', AT_posint, true);
-        $this->game->ask($playerId, $questionType, []);
+        $valuesMask = self::getArg('values', AT_posint, true);
+        $this->game->ask($playerId, $valuesMask);
         self::ajaxResponse();
     }
 

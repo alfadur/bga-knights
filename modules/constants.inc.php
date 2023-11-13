@@ -41,4 +41,6 @@ interface Globals {
     const ACTIONS_TAKEN_ID = 10;
     const CAPTAIN = 'captain';
     const CAPTAIN_ID = 11;
+    const ASKER = 'asker';
+    const ASKER_ID = 12;
 }

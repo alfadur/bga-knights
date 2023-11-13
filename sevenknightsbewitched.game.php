@@ -28,7 +28,8 @@ class SevenKnightsBewitched extends Table
 
         self::initGameStateLabels([
             Globals::CAPTAIN => Globals::CAPTAIN_ID,
-            Globals::ACTIONS_TAKEN => Globals::ACTIONS_TAKEN_ID
+            Globals::ACTIONS_TAKEN => Globals::ACTIONS_TAKEN_ID,
+            Globals::ASKER => Globals::ASKER_ID
         ]);
     }
 
@@ -69,6 +70,7 @@ class SevenKnightsBewitched extends Table
             EOF);
         self::setGameStateInitialValue(Globals::ACTIONS_TAKEN, 0);
         self::setGameStateInitialValue(Globals::CAPTAIN, $captain);
+        self::setGameStateInitialValue(Globals::ASKER, 0);
     }
 
     static function setupPlayers(array $players, array $colors, bool $tutorial): void
@@ -135,58 +137,67 @@ class SevenKnightsBewitched extends Table
     {
         self::checkAction('inspect');
         $activePlayerId = (int)self::getActivePlayerId();
+
         if ($playerId !== $activePlayerId) {
             self::DbQuery(<<<EOF
                 UPDATE player_status 
                 SET inspected = $playerId
                 WHERE player_id = $activePlayerId  
                 EOF);
-            if (self::DbAffectedRow() > 0) {
-                $playerName = self::getPlayerNameById($activePlayerId);
-                $targetName = self::getPlayerNameById($playerId);
-                self::notifyAllPlayers('message', clienttranslate('${player_name1} inspects ${player_name2}\'s tile'), [
-                    'player_name1' => $playerName,
-                    'player_name2' => $targetName
-                ]);
 
-                $character = self::getUniqueValueFromDb(<<<EOF
+            $playerName = self::getPlayerNameById($activePlayerId);
+            $targetName = self::getPlayerNameById($playerId);
+            self::notifyAllPlayers('message', clienttranslate('${player_name1} inspects ${player_name2}\'s tile'), [
+                'player_name1' => $playerName,
+                'player_name2' => $targetName
+            ]);
+
+            $character = self::getUniqueValueFromDb(<<<EOF
                     SELECT `character` FROM player_status
                     WHERE player_id = $playerId
                     EOF);
-                $message = $character === "0" ?
-                    clienttranslate('${player_name} turns out to be ${tileIcon}. You are now bewitched!') :
-                    clienttranslate('${player_name} turns out to be ${tileIcon}');
-                self::notifyPlayer($activePlayerId, 'inspect', $message, [
-                    'player_name' => $targetName,
-                    'playerId' => $playerId,
-                    'character' => $character,
-                    'tileIcon' => $character,
-                    'preserve' => ['tileIcon']
-                ]);
+            $message = $character === "0" ?
+                clienttranslate('${player_name} turns out to be ${tileIcon}. You are now bewitched!') :
+                clienttranslate('${player_name} turns out to be ${tileIcon}');
+            self::notifyPlayer($activePlayerId, 'inspect', $message, [
+                'player_name' => $targetName,
+                'playerId' => $playerId,
+                'character' => $character,
+                'tileIcon' => $character,
+                'preserve' => ['tileIcon']
+            ]);
 
-                self::incGamestateValue(Globals::ACTIONS_TAKEN, 1);
-                $this->gamestate->nextState('');
-                return;
-            }
+            self::incGamestateValue(Globals::ACTIONS_TAKEN, 1);
+            $this->gamestate->nextState('');
+        } else {
+            throw new BgaUserException('Invalid player');
         }
-        throw new BgaUserException('Invalid player');
     }
 
-    function ask(int $playerId, int $questionType, array $questionArgs)
+    function ask(int $playerId, int $valuesMask)
     {
         self::checkAction('ask');
         $activePlayerId = (int)self::getActivePlayerId();
+
         if ($playerId !== $activePlayerId) {
-            $questionJson = '';
+            $valuesMask = $valuesMask & 0b1111111;
+            if ($valuesMask === 0 || $valuesMask === 0b1111111) {
+                throw new BgaUserException("Invalid Number");
+            }
+
             self::DbQuery(<<<EOF
                 UPDATE player_status
-                SET asked = $playerId AND question = $questionJson 
+                SET asked = $playerId, question = $valuesMask 
                 WHERE player_id = $activePlayerId
                 EOF);
+
+            self::incGamestateValue(Globals::ACTIONS_TAKEN, 1);
+            self::setGameStateValue(Globals::ASKER, $activePlayerId);
+
             $this->gamestate->nextState('');
-            return;
+        } else {
+            throw new BgaUserException('Invalid player');
         }
-        throw new BgaUserException('Invalid player');
     }
 
     function answer(int $answer): void
@@ -243,6 +254,25 @@ class SevenKnightsBewitched extends Table
 
     function stDispatch(): void
     {
+        $asker = (int)self::getGameStateValue(Globals::ASKER);
+        if ($asker !== 0) {
+            self::setGameStateValue(Globals::ASKER, 0);
+            ['asked' => $asked, 'answer' => $answer] =
+                self::getNonEmptyObjectFromDb(<<<EOF
+                    SELECT self.asked, other.answer 
+                    FROM player_status AS self 
+                        LEFT JOIN player_status AS other
+                        ON other.player_id = self.asked
+                    WHERE self.player_id = $asker; 
+                    EOF);
+            if ($answer === null) {
+                $this->gamestate->changeActivePlayer($asked);
+                $this->gamestate->nextState('answer');
+                return;
+            }
+            $this->gamestate->changeActivePlayer($asker);
+        }
+
         $playersCount = $this->getPlayersNumber();
         $actionsTaken = self::getGameStateValue(Globals::ACTIONS_TAKEN);
         if ($actionsTaken >= 2 * $playersCount) {
