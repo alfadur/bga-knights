@@ -90,7 +90,8 @@ $machinestates = [
         Fsm::DESCRIPTION => clienttranslate('${actplayer} must answer the question'),
         Fsm::OWN_DESCRIPTION => clienttranslate('${you} must answer the question'),
         Fsm::POSSIBLE_ACTIONS => ['answer'],
-        Fsm::TRANSITIONS => ['answer' => State::DISPATCH_ACTION]
+        Fsm::ARGUMENTS => 'argAnswer',
+        Fsm::TRANSITIONS => ['' => State::DISPATCH_ACTION]
     ],
 
     State::VOTE => [

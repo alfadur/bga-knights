@@ -55,7 +55,7 @@ class action_sevenknightsbewitched extends APP_GameAction
     public function answer()
     {
         self::setAjaxMode();
-        $answer = self::getArg('answer', AT_posint, true);
+        $answer = self::getArg('answer', AT_bool, true);
         $this->game->answer($answer);
         self::ajaxResponse();
     }

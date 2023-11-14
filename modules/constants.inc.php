@@ -43,4 +43,6 @@ interface Globals {
     const CAPTAIN_ID = 11;
     const ASKER = 'asker';
     const ASKER_ID = 12;
+    const ANSWER = 'answer';
+    const ANSWER_ID = 13;
 }

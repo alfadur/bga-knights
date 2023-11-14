@@ -16,7 +16,6 @@ function clearTag(tag) {
     }
 }
 
-
 function createElement(parent, html) {
     const element = parent.appendChild(
         document.createElement("div"));
@@ -159,7 +158,7 @@ define([
     },
 
     onUpdateActionButtons(stateName, args) {
-        console.log(`onUpdateActionButtons: ${stateName}`);
+        console.log(`onUpdateActionButtons: ${stateName}`, args);
 
         if (this.isCurrentPlayerActive()) {
             switch (stateName) {
@@ -170,6 +169,21 @@ define([
                         });
                     });
                     document.getElementById("mur-inspect").classList.add("disabled");
+                    break;
+                }
+                case 'answer': {
+                    const that = this;
+                    const answer = parseInt(args._private.answer);
+
+                    function answerButton(id, label, answer, disable) {
+                        that.addActionButton(id, label, () => {
+                            that.request('answer', {answer});
+                        });
+                        document.getElementById("mur-answer-yes").classList.toggle("disabled", disable);
+                    }
+                    
+                    answerButton("mur-answer-yes", _("Yes"), true, answer === 1);
+                    answerButton("mur-answer-no", _("No"), false, answer === 2);
                     break;
                 }
             }

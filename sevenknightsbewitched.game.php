@@ -29,7 +29,8 @@ class SevenKnightsBewitched extends Table
         self::initGameStateLabels([
             Globals::CAPTAIN => Globals::CAPTAIN_ID,
             Globals::ACTIONS_TAKEN => Globals::ACTIONS_TAKEN_ID,
-            Globals::ASKER => Globals::ASKER_ID
+            Globals::ASKER => Globals::ASKER_ID,
+            Globals::ANSWER => Globals::ANSWER_ID
         ]);
     }
 
@@ -71,6 +72,7 @@ class SevenKnightsBewitched extends Table
         self::setGameStateInitialValue(Globals::ACTIONS_TAKEN, 0);
         self::setGameStateInitialValue(Globals::CAPTAIN, $captain);
         self::setGameStateInitialValue(Globals::ASKER, 0);
+        self::setGameStateInitialValue(Globals::ANSWER, 0);
     }
 
     static function setupPlayers(array $players, array $colors, bool $tutorial): void
@@ -200,17 +202,22 @@ class SevenKnightsBewitched extends Table
         }
     }
 
-    function answer(int $answer): void
+    function answer(bool $answer): void
     {
         self::checkAction('answer');
-        $answer = $answer | 0x1;
+        $answer = $answer ? 1 : 0;
+        $expectedAnswer = (int)self::getGameStateValue(Globals::ANSWER);
+        if ($expectedAnswer > 0 && $expectedAnswer - 1 !== $answer) {
+            throw new BgaUserException('Invalid answer');
+        }
+
         $activePlayerId = self::getActivePlayerId();
         self::DbQuery(<<<EOF
             UPDATE player_status
             SET answer = $answer
             WHERE player_id = $activePlayerId
             EOF);
-        $this->gamestate->nextState('answer');
+        $this->gamestate->nextState('');
     }
 
     function vote(int $playerId): void
@@ -252,20 +259,42 @@ class SevenKnightsBewitched extends Table
 
     }
 
+    function determineAnswer(string $playerId, int $question): int
+    {
+        $witchTeam = (int)self::getUniqueValueFromDb(<<<EOF
+            SELECT COUNT(*)
+            FROM player_status AS self 
+                LEFT JOIN player_status as other
+                ON other.player_id = self.inspected
+            WHERE self.player_id = $playerId 
+              AND (self.`character` = 0 OR other.`character` = 0)
+            EOF);
+        if ($witchTeam) {
+            return 0;
+        }
+        return (int)self::getUniqueValueFromDb(<<<EOF
+            SELECT (`character` & $question) <> 0
+            FROM player_status 
+            WHERE player_id = $playerId
+            EOF) + 1;
+    }
+
     function stDispatch(): void
     {
         $asker = (int)self::getGameStateValue(Globals::ASKER);
         if ($asker !== 0) {
             self::setGameStateValue(Globals::ASKER, 0);
-            ['asked' => $asked, 'answer' => $answer] =
+            ['asked' => $asked, 'question' => $question, 'answer' => $answer] =
                 self::getNonEmptyObjectFromDb(<<<EOF
-                    SELECT self.asked, other.answer 
+                    SELECT self.asked, self.question, other.answer 
                     FROM player_status AS self 
                         LEFT JOIN player_status AS other
                         ON other.player_id = self.asked
                     WHERE self.player_id = $asker; 
                     EOF);
             if ($answer === null) {
+                self::setGameStateValue(Globals::ANSWER,
+                    $this->determineAnswer($asked, $question));
                 $this->gamestate->changeActivePlayer($asked);
                 $this->gamestate->nextState('answer');
                 return;
@@ -289,6 +318,17 @@ class SevenKnightsBewitched extends Table
     function stFinalCheck(): void
     {
 
+    }
+
+    function argAnswer(): array
+    {
+        return [
+            '_private' => [
+                'active' => [
+                    'answer' => self::getGameStateValue(Globals::ANSWER)
+                ]
+            ]
+        ];
     }
 
     function zombieTurn($state, $activePlayer)
