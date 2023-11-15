@@ -181,7 +181,7 @@ define([
                         });
                         document.getElementById("mur-answer-yes").classList.toggle("disabled", disable);
                     }
-                    
+
                     answerButton("mur-answer-yes", _("Yes"), true, answer === 1);
                     answerButton("mur-answer-no", _("No"), false, answer === 2);
                     break;

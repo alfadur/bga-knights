@@ -1,5 +1,17 @@
 <?php
 
+interface GameOption {
+    const MODE = 'mode';
+    const MODE_ID = 100;
+}
+
+interface GameMode {
+    const STANDARD = 1;
+    const TUTORIAL = 2;
+    const DISORDER = 3;
+    const ADVANCED = 4;
+}
+
 interface Fsm {
     const NAME = 'name';
     const DESCRIPTION = 'description';

@@ -101,7 +101,7 @@ $machinestates = [
         Fsm::OWN_DESCRIPTION => clienttranslate('You must cast a vote for the captain'),
         Fsm::ACTION => 'stMakeEveryoneActive',
         Fsm::POSSIBLE_ACTIONS => ['vote', 'cancel'],
-        Fsm::TRANSITIONS => ['vote' => State::APPOINT_CAPTAIN]
+        Fsm::TRANSITIONS => ['' => State::APPOINT_CAPTAIN]
     ],
 
     State::APPOINT_CAPTAIN => [
@@ -109,7 +109,6 @@ $machinestates = [
         Fsm::TYPE => FsmType::GAME,
         Fsm::DESCRIPTION => '',
         Fsm::ACTION => 'stAppoint',
-        Fsm::ARGUMENTS => 'argAppoint',
         Fsm::TRANSITIONS => [
             'appoint' => State::DEPLOY_KNIGHTS,
             'end' => State::ROUND_END

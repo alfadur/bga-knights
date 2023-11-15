@@ -8,22 +8,67 @@
  * This code has been produced on the BGA studio platform for use on http://boardgamearena.com.
  * See http://en.boardgamearena.com/#!doc/Studio for more information.
  * -----
- *
- * gameoptions.inc.php
- *
- * SevenKnightsBewitched game options description
- * 
- * In this file, you can define your game options (= game variants).
- *   
- * Note: If your game has no variant, you don't have to modify this file.
- *
- * Note²: All options defined in this file should have a corresponding "game state labels"
- *        with the same ID (see "initGameStateLabels" in sevenknightsbewitched.game.php)
- *
- * !! It is not a good idea to modify this file when a game is running !!
- *
  */
 
-$game_options = [];
+require_once('modules/constants.inc.php');
+
+$game_options = [
+    GameOption::MODE_ID => [
+        'name'=> totranslate('Game Mode'),
+        'default' => 0,
+        'values' => [
+            GameMode::STANDARD => [
+                'name' => totranslate('Standard'),
+                'tmdisplay' => totranslate('Standard')
+            ],
+            GameMode::TUTORIAL => [
+                'name' => totranslate('Learning'),
+                'is_coop' => true
+            ],
+            GameMode::DISORDER => [
+                'name' => totranslate('Double Tiles'),
+                'description' => totranslate('Each player has two tiles instead of one')
+            ],
+            GameMode::ADVANCED => [
+                'name' => totranslate('Advanced'),
+                'nobeginner' => true
+            ]
+        ],
+        'displaycondition' => [
+            GameMode::STANDARD => [
+                [
+                    'type' => 'minplayers',
+                    'value' => 4
+                ]
+            ],
+            GameMode::TUTORIAL => [
+                [
+                    'type' => 'minplayers',
+                    'value' => 4
+                ],
+                [
+                    'type' => 'maxplayers',
+                    'value' => 7
+                ]
+            ],
+            GameMode::DISORDER=> [
+                [
+                    'type' => 'maxplayers',
+                    'value' => 4
+                ]
+            ],
+            GameMode::ADVANCED => [
+                [
+                    'type' => 'minplayers',
+                    'value' => 4
+                ],
+                [
+                    'type' => 'maxplayers',
+                    'value' => 7
+                ]
+            ]
+        ]
+    ]
+];
 
 

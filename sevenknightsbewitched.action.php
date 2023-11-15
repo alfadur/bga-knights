@@ -38,8 +38,8 @@ class action_sevenknightsbewitched extends APP_GameAction
     public function inspect()
     {
         self::setAjaxMode();
-        $playerId = self::getArg('playerId', AT_posint, true);
-        $this->game->inspect($playerId);
+        $tileId = self::getArg('tileId', AT_posint, true);
+        $this->game->inspect($tileId);
         self::ajaxResponse();
     }
 
@@ -47,8 +47,9 @@ class action_sevenknightsbewitched extends APP_GameAction
     {
         self::setAjaxMode();
         $playerId = self::getArg('playerId', AT_posint, true);
+        $tileId = self::getArg('tileId', AT_posint, true);
         $valuesMask = self::getArg('values', AT_posint, true);
-        $this->game->ask($playerId, $valuesMask);
+        $this->game->ask($playerId, $tileId, $valuesMask);
         self::ajaxResponse();
     }
 
