@@ -143,35 +143,30 @@ class SevenKnightsBewitched extends Table
     {
         $currentPlayerId = self::getCurrentPlayerId();
 
-        $fullPlayers = self::getCollectionFromDb(<<<EOF
+        $players = self::getCollectionFromDb(<<<EOF
             SELECT player_id AS id, player_score AS score, 
                    player_name AS name, player_color AS color, 
-                   player_no AS no, `character`, token, inspected
+                   player_no AS no, token, inspected
             FROM player NATURAL JOIN player_status
             EOF);
-        $players = [];
 
-        foreach ($fullPlayers as $playerId => $fullPlayer) {
-            $players[$playerId] = [
-                'id' => $playerId,
-                'name' => $fullPlayer['name'],
-                'no' => $fullPlayer['no'],
-                'color' => $fullPlayer['color'],
-                'score' => $fullPlayer['score'],
-                'token' => $fullPlayer['token'],
-            ];
-        }
+        $tiles = self::getObjectListFromDb(<<<EOF
+            SELECT tile.player_id, tile_id AS id, 
+                   (CASE WHEN tile.player_id = $currentPlayerId
+                        OR tile_id = player_status.inspected
+                    THEN tile.`character` END) AS `character` 
+            FROM tile INNER JOIN player_status
+                ON player_status.player_id = $currentPlayerId            
+            EOF);
 
-        $players[$currentPlayerId]['character'] =
-            $fullPlayers[$currentPlayerId]['character'];
-        $inspectedId = $fullPlayers[$currentPlayerId]['inspected'];
+        $gameMode = (int)self::getGameStateValue(GameOption::MODE);
+        $hasWitch = $gameMode !== GameMode::TUTORIAL;
 
-        if ($inspectedId !== null) {
-            $players[$inspectedId]['character'] =
-                $fullPlayers[$inspectedId]['character'];
-        }
-
-        return ['players' => $players];
+        return [
+            'players' => $players,
+            'tiles' => $tiles,
+            'hasWitch' => $hasWitch
+        ];
     }
 
     function inspect(int $tileId): void
@@ -184,7 +179,8 @@ class SevenKnightsBewitched extends Table
                 INNER JOIN tile AS target ON tile_id = $tileId
             SET inspected = $tileId
             WHERE self.player_id = $activePlayerId                 
-                AND target.player_id <> $activePlayerId
+                AND (target.player_id IS NULL
+                    OR target.player_id <> $activePlayerId)
             EOF);
 
         if (self::DbAffectedRow() === 0) {
@@ -195,8 +191,8 @@ class SevenKnightsBewitched extends Table
         ['character' => $character, 'player_name' => $targetName] =
             self::getNonEmptyObjectFromDb(<<<EOF
                 SELECT `character`, `player_name` 
-                FROM tile NATURAL JOIN player
-                WHERE tileId = $tileId
+                FROM tile NATURAL LEFT JOIN player
+                WHERE tile_id = $tileId
                 EOF);
         $targetName ??= 'Wandering knight';
 

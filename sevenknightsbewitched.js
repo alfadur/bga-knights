@@ -23,31 +23,62 @@ function createElement(parent, html) {
     return parent.lastElementChild;
 }
 
-function createPlayer(index, angle, playerId, playerName, playerColor) {
+function createPlayer(index, angle, player) {
     const radians = angle / 180 * Math.PI;
     const coords = [Math.cos(radians), -Math.sin(radians)];
     const style = `--index: ${index}; --cx: ${coords[0]}; --cy: ${coords[1]}`;
-    return `<div id="mur-player-${playerId}" class="mur-player" style="${style}" data-player="${playerId}">
-        <div class="mur-player-name" style="color: #${playerColor}">${playerName}</div>
+
+    const id = player ? player.id : "none";
+    const name = player ?
+        `<div class="mur-player-name" style="color: #${player.color}">${player.name}</div>` :
+        "";
+
+    return `<div id="mur-player-${id}" class="mur-player" style="${style}" data-player="${id}">
+        ${name}
     </div>`;
 }
 
-function createTile(token, character) {
-    console.log("token", token);
-    let settings = [];
-    if (token !== undefined) {
+function createTiles(tiles, token) {
+    const settings = [];
+    if (token !== null) {
         token = parseInt(token);
         settings.push(`--token-x: ${token % 4}; --token-y: ${Math.floor(token / 4)}`);
     }
-    if (character !== undefined) {
-       settings.push(`--character: ${character}`);
-    }
-    const style = settings.join("; ");
-    return `<div class="mur-tile" style="${style}">
-        <div class="mur-tile-back"></div>                
-        <div class="mur-tile-front"></div>
-        <div class="mur-tile-side"></div>
+
+    const tileElements = tiles.map(tile => {
+        const character = tile.character !== null ?
+            [`--character: ${tile.character}`] : [];
+        const style = [character, ...settings].join("; ");
+
+        const classes = [];
+        if (token !== null) {
+            classes.push("mur-owned");
+        }
+        if (tile.character !== null) {
+            classes.push("mur-flipped");
+        }
+
+        return `<div id="mur-tile-${tile.id}" 
+                    class="mur-tile ${classes.join(" ")}" 
+                    style="${style}"
+                    data-id="${tile.id}">
+            <div class="mur-tile-back"></div>                
+            <div class="mur-tile-front"></div>
+            <div class="mur-tile-side"></div>
+        </div>`
+    });
+
+    return `<div class="mur-tile-container">
+        ${tileElements.join("")}
     </div>`;
+}
+
+function createSpareTile(index) {
+    return `<div id="mur-space-tile-${index}" 
+                class="mur-tile mur-flipped" 
+                style="--character: ${index}">               
+        <div class="mur-tile-front"></div>
+    </div>`
 }
 
 function createPlaceholder(index) {
@@ -92,32 +123,54 @@ define([
             return (parseInt(player.no) - 1 - currentIndex + playerCount) % playerCount;
         }
 
+        const freeTiles = data.tiles.filter(tile => tile.player_id === null);
+        const areaCount = freeTiles.length > 0 ? playerCount + 1 : playerCount;
+
+        function createPlayerArea(player, tiles, index) {
+            const angle = 90 + index * 360 / areaCount;
+            const playerArea = createElement(playArea,
+                createPlayer(index, angle, player));
+
+            if (player) {
+                playerArea.addEventListener('click', event => {
+                    event.stopPropagation();
+                    console.log("Player click");
+                    this.onPlayerClick(player);
+                });
+            }
+
+            const tileContainer = createElement(playerArea,
+                createTiles(tiles, player && player.token));
+
+            for (const tile of tileContainer.querySelectorAll(".mur-tile")) {
+                console.log("New tile", tile);
+                tile.addEventListener('click', event => {
+                    event.stopPropagation();
+                    console.log("Tile click");
+                    this.onTileClick(tile, player && player.id);
+                });
+            }
+        }
+
         for (const playerId of playerIds) {
             const player = players[playerId];
             const index = sortKey(player);
-            const angle = 90 + index * 360 / playerCount;
 
-            const playerArea = createElement(playArea,
-                createPlayer(index, angle, player.id, player.name, player.color));
-            const tile = createElement(playerArea,
-                createTile(player.token, player.character));
-
-            tile.classList.add("mur-owned");
-            if ("character" in player) {
-                tile.classList.add("mur-flipped");
-            }
-
-            console.log("New tile", tile);
-            tile.addEventListener('click', event => {
-                event.stopPropagation();
-                console.log("Tile click");
-                this.onTileClick(tile);
-            })
+            createPlayerArea.call(this, player, data.tiles.filter(tile =>
+                tile.player_id === playerId), index);
         }
 
+        if (freeTiles.length > 0) {
+            createPlayerArea.call(this, null, freeTiles, areaCount - 1);
+        }
+
+        const maxTile = data.hasWitch ?
+            data.tiles.length - 2 :
+            data.tiles.length - 1;
+
         Array.from(document.querySelectorAll(" .mur-placeholder")).forEach((place, index) => {
-            if (index >= playerCount - 1) {
-                createElement(place, createTile(undefined, index + 1)).classList.add("mur-flipped");
+            if (index > maxTile) {
+                createElement(place, createSpareTile(index + 1), undefined);
             }
         });
 
@@ -131,10 +184,15 @@ define([
 
         if (this.isCurrentPlayerActive()) {
             switch (stateName) {
-                case "inspect":
-                case "question": {
+                case "inspect": {
                     for (const tile of document.querySelectorAll(".mur-tile")) {
                         tile.classList.add("mur-selectable");
+                    }
+                    break;
+                }
+                case "question": {
+                    for (const player of document.querySelectorAll(".mur-player")) {
+                        player.classList.add("mur-selectable");
                     }
                     break;
                 }
@@ -165,7 +223,7 @@ define([
                 case "inspect": {
                     this.addActionButton('mur-inspect', _("Inspect"), () => {
                         this.request("inspect", {
-                            playerId: this.selectedTile.parentElement.dataset.player
+                            tileId: this.selectedTile.dataset.id
                         });
                     });
                     document.getElementById("mur-inspect").classList.add("disabled");
@@ -210,7 +268,7 @@ define([
         return false;
     },
 
-    questionDialog(tile) {
+    questionDialog(tile, ownerId) {
         const dialog = new ebg.popindialog();
         dialog.create("mur-question-dialog");
         dialog.setTitle(_("Choose a question"));
@@ -224,7 +282,8 @@ define([
             }
 
             this.request("ask", {
-                playerId: tile.parentElement.dataset.player,
+                playerId: ownerId,
+                tileId: tile.dataset.id,
                 values
             }, () => {
                 dialog.destroy();
@@ -245,15 +304,16 @@ define([
         }
     },
 
+    onPlayerClick(player) {
+        if (this.checkAction("ask", true)) {
+            this.questionDialog(player);
+        }
+    },
+
     onTileClick(tile) {
         if (this.checkAction("inspect", true)) {
             document.getElementById("mur-inspect").classList.toggle(
                 "disabled", !this.selectTile(tile));
-        } else if (this.checkAction("ask", true)) {
-            if (this.selectTile(tile)) {
-                this.selectTile(null);
-                this.questionDialog(tile);
-            }
         }
     },
 
@@ -261,7 +321,7 @@ define([
         console.log("notifications subscriptions setup");
         dojo.subscribe('inspect', this, data => {
             console.log(data);
-            const tile = document.querySelector(`#mur-player-${data.args.playerId} .mur-tile`);
+            const tile = document.querySelector(`#mur-tile-${data.args.tileId}`);
             tile.style.setProperty("--character", data.args.character);
             tile.classList.add("mur-flipped");
         });

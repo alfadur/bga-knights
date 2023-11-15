@@ -15,7 +15,7 @@ require_once('modules/constants.inc.php');
 $game_options = [
     GameOption::MODE_ID => [
         'name'=> totranslate('Game Mode'),
-        'default' => 0,
+        'default' => GameMode::STANDARD,
         'values' => [
             GameMode::STANDARD => [
                 'name' => totranslate('Standard'),
