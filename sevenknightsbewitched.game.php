@@ -81,23 +81,31 @@ class SevenKnightsBewitched extends Table
     static function setupPlayers(array $players, array $colors, int $mode): void
     {
         $tilesPerPlayer = 1;
-        $additionalCharacter =
-            (int)(count($players) < 6 && $mode !== GameMode::DISORDER);
+        $additionalCharacters =
+            $mode === GameMode::DISORDER ? 3 :
+                (count($players) < 6 ? 1 : 0);
+
         switch ($mode) {
             case GameMode::STANDARD:
-                $characters = range(0,count($players) + $additionalCharacter - 1);
+                $characters = range(0,count($players) + $additionalCharacters - 1);
                 break;
             case GameMode::TUTORIAL:
-                $characters = range(1, count($players) + $additionalCharacter);
+                $characters = range(1, count($players) + $additionalCharacters);
                 break;
             case GameMode::ADVANCED:
                 $characters = range(0, 7);
                 shuffle($characters);
-                $characters = array_slice($characters, 0, count($players) + $additionalCharacter);
+                $characters = array_slice($characters, 0, count($players) + $additionalCharacters);
                 break;
             case GameMode::DISORDER:
-                $characters = range(0, 2 * count($players) - 1);
-                $tilesPerPlayer = 2;
+                $batch = range(1, 7);
+                shuffle($batch);
+                $characters = array_slice($batch, 0, count($players));
+                $batch = array_slice($batch, count($players));
+                $batch[] = 0;
+                shuffle($batch);
+
+                $characters = array_merge($characters, array_slice($batch, 0, $additionalCharacters));
                 break;
         }
         shuffle($characters);
@@ -116,7 +124,7 @@ class SevenKnightsBewitched extends Table
             }
         }
 
-        if ($additionalCharacter) {
+        for ($i = 0; $i < $additionalCharacters; ++$i) {
             $character = array_shift($characters);
             $tileValues[] = "(NULL, $character)";
         }
@@ -174,13 +182,27 @@ class SevenKnightsBewitched extends Table
         self::checkAction('inspect');
         $activePlayerId = (int)self::getActivePlayerId();
 
+        $mode = (int)self::getGameStateValue(GameOption::MODE);
+
+        if ($mode === GameMode::DISORDER) {
+            $actionsTaken = (int)self::getGameStateValue(Globals::ACTIONS_TAKEN);
+
+            if ($actionsTaken < self::getPlayersNumber()) {
+                $targetCheck = "target.player_id <> $activePlayerId";
+            } else {
+                $targetCheck = 'target.player_id IS NULL';
+            }
+        } else {
+            $targetCheck =
+                "(target.player_id IS NULL OR target.player_id <> $activePlayerId)";
+        }
+
         self::DbQuery(<<<EOF
             UPDATE player_status AS self 
                 INNER JOIN tile AS target ON tile_id = $tileId
             SET inspected = $tileId
             WHERE self.player_id = $activePlayerId                 
-                AND (target.player_id IS NULL
-                    OR target.player_id <> $activePlayerId)
+                AND $targetCheck
             EOF);
 
         if (self::DbAffectedRow() === 0) {
@@ -194,7 +216,7 @@ class SevenKnightsBewitched extends Table
                 FROM tile NATURAL LEFT JOIN player
                 WHERE tile_id = $tileId
                 EOF);
-        $targetName ??= 'Wandering knight';
+        $targetName ??= 'Knight-Errant';
 
         self::notifyAllPlayers('message', clienttranslate('${player_name1} inspects ${player_name2}\'s tile'), [
             'player_name1' => $playerName,
@@ -380,11 +402,14 @@ class SevenKnightsBewitched extends Table
             $this->gamestate->changeActivePlayer($asker);
         }
 
+        $mode = (int)self::getGameStateValue(GameOption::MODE);
+        $inspectsPerPlayer = $mode === GameMode::DISORDER ? 2 : 1;
+
         $playersCount = $this->getPlayersNumber();
         $actionsTaken = self::getGameStateValue(Globals::ACTIONS_TAKEN);
-        if ($actionsTaken >= 2 * $playersCount) {
+        if ($actionsTaken >= ($inspectsPerPlayer + 1) * $playersCount) {
             $this->gamestate->nextState('vote');
-        } else if ($actionsTaken >= $playersCount) {
+        } else if ($actionsTaken >= $inspectsPerPlayer * $playersCount) {
             self::activeNextPlayer();
             $this->gamestate->nextState('question');
         } else {

@@ -85,7 +85,14 @@ function createPlaceholder(index) {
     return `<div class="mur-placeholder" data-number="${index + 1}"></div>`
 }
 
-function createQuestionDialog() {
+function createQuestionDialog(tiles) {
+    /*const options = [];
+    for (const tile of tiles) {
+        options.push(`<div>
+
+        </div>`);
+    }*/
+
     const questionText = _("Is your number one of...");
     const numbers = [1, 2, 3, 4, 5, 6, 7].map(n =>
         `<div class="mur-single-number" data-number="${n}"></div>`);
@@ -94,7 +101,7 @@ function createQuestionDialog() {
         <div class="mur-number-list">
             ${numbers.join("")}
         </div>
-        <div id="mur-question-dialog-buttons"></div>        
+        <div id="mur-question-dialog-buttons"></div>
     </div>`;
 }
 
@@ -268,7 +275,7 @@ define([
         return false;
     },
 
-    questionDialog(tile, ownerId) {
+    questionDialog(player) {
         const dialog = new ebg.popindialog();
         dialog.create("mur-question-dialog");
         dialog.setTitle(_("Choose a question"));
