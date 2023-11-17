@@ -42,7 +42,7 @@
     pointer-events: all;
 }
 
-.mur-player.mur-selectable:hover {
+.mur-player.mur-selectable:hover, .mur-player.mur-selected {
     border: 3px solid black;
 }
 
@@ -142,7 +142,7 @@
     }
 }
 
-.mur-tile:not(.mur-dealt) {
+/*.mur-tile:not(.mur-dealt) {
     transform: translateY(calc(-10px * var(--index)));
 }
 
@@ -151,7 +151,7 @@
             rotate(calc(var(--index) / var(--player-count) * 360deg))
             translate(calc(var(--play-width) / 2 - 60px))
             rotate(calc(var(--index) / var(--player-count) * -360deg));
-}
+}*/
 
 .mur-tile-front, .mur-tile-side, .mur-tile-back {
     position: absolute;

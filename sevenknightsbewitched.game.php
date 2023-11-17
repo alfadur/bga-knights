@@ -267,7 +267,7 @@ class SevenKnightsBewitched extends Table
                     OR recipient.inspected = tile_id)
             EOF);
         if (self::DbAffectedRow() === 0) {
-            throw new BgaUserException('Invalid player');
+            throw new BgaUserException('Invalid player/tile');
         }
 
         self::incGamestateValue(Globals::ACTIONS_TAKEN, 1);

@@ -9,9 +9,9 @@ class Game {
     checkAction(name, optional) { return false; }
     addActionButton(id, text, handler, destination, blink, style) {}
     ajaxcall(url, args, onSuccess, onFailure) {}
-    get notifqueue() {
-        return new notifqueue();
-    }
+    setClientState(name, args) {}
+    restoreServerGameState() {}
+    get notifqueue() { return new notifqueue(); }
 }
 
 
