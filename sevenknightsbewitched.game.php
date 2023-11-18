@@ -299,15 +299,13 @@ class SevenKnightsBewitched extends Table
     {
         self::checkAction('vote');
         $currentPlayerId = (int)self::getCurrentPlayerId();
-        if ($playerId === $currentPlayerId) {
-            throw new BgaUserException('Invalid player');
-        }
 
         self::DbQuery(<<<EOF
             UPDATE player_status 
             SET voted = $playerId
             WHERE player_id = $currentPlayerId
             EOF);
+
         if (self::DbAffectedRow() === 0) {
             throw new BgaUserException('Invalid player');
         }
@@ -321,6 +319,12 @@ class SevenKnightsBewitched extends Table
         if (!(self::isSpectator() || self::isCurrentPlayerZombie())) {
             $playerId = (int)self::getCurrentPlayerId();
             if (!$this->gamestate->isPlayerActive($playerId)) {
+                self::DbQuery(<<<EOF
+                    UPDATE player_status 
+                    SET voted = NULL
+                    WHERE player_id = $playerId
+                    EOF);
+
                 $this->gamestate->setPlayersMultiactive([$playerId], '');
             }
         }
@@ -334,9 +338,8 @@ class SevenKnightsBewitched extends Table
         $this->gamestate->nextState('');
     }
 
-    function determineAnswer(string $playerId, int $tileId, int $question): int
-    {
-        $witchTeam = (int)self::getUniqueValueFromDb(<<<EOF
+    static function isWitchTeam(int $playerId): int {
+        return (int)self::getUniqueValueFromDb(<<<EOF
             SELECT COUNT(*)
             FROM player_status AS self INNER JOIN tile as target 
                 ON tile_id = self.inspected 
@@ -344,7 +347,11 @@ class SevenKnightsBewitched extends Table
             WHERE self.player_id = $playerId 
               AND target.`character` = 0
             EOF);
-        if ($witchTeam) {
+    }
+
+    function determineAnswer(string $playerId, int $tileId, int $question): int
+    {
+        if (self::isWitchTeam($playerId)) {
             return 0;
         }
         return (int)self::getUniqueValueFromDb(<<<EOF
@@ -358,8 +365,8 @@ class SevenKnightsBewitched extends Table
         $lastCaptain = (int)self::getGameStateValue(Globals::CAPTAIN);
         $playerCount = self::getPlayersNumber();
         $captain = self::getUniqueValueFromDb(<<<EOF
-            SELECT self.player_id FROM (player_status NATURAL JOIN player) AS self
-                INNER JOIN (player_status NATURAL JOIN player) AS voter
+            SELECT self.player_id FROM (SELECT * FROM player_status NATURAL JOIN player) AS self
+                INNER JOIN (SELECT * FROM player_status NATURAL JOIN player) AS voter
                     ON voter.voted = self.player_id
             GROUP BY self.player_id
             ORDER BY COUNT(*) DESC,
@@ -377,7 +384,15 @@ class SevenKnightsBewitched extends Table
         self::notifyAllPlayers('message', clienttranslate('${player_name} is appointed as the captain'), [
             'player_name' => $playerName
         ]);
-        $this->gamestate->nextState('');
+
+        if (self::isWitchTeam($captain)) {
+            self::notifyAllPlayers('message', clienttranslate('${player_name} belongs to the Witch Team'), [
+                'player_name' => $playerName
+            ]);
+            $this->gamestate->nextState('end');
+        } else {
+            $this->gamestate->nextState('appoint');
+        }
     }
 
     function stDispatch(): void
@@ -421,6 +436,11 @@ class SevenKnightsBewitched extends Table
     function stFinalCheck(): void
     {
 
+    }
+
+    function stRoundEnd(): void
+    {
+        $this->gamestate->nextState('continue');
     }
 
     function argAnswer(): array

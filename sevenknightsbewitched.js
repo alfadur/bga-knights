@@ -133,7 +133,7 @@ define([
                 createPlayer(index, angle, player));
 
             if (player) {
-                playerArea.addEventListener('click', event => {
+                playerArea.addEventListener("click", event => {
                     event.stopPropagation();
                     console.log("Player click");
                     this.onPlayerClick(player);
@@ -145,7 +145,7 @@ define([
 
             for (const tile of tileContainer.querySelectorAll(".mur-tile")) {
                 console.log("New tile", tile);
-                tile.addEventListener('click', event => {
+                tile.addEventListener("click", event => {
                     event.stopPropagation();
                     console.log("Tile click");
                     this.onTileClick(tile, player && player.id);
@@ -191,13 +191,14 @@ define([
                     }
                     break;
                 }
-                case "question": {
+                case "question":
+                case "vote": {
                     for (const player of document.querySelectorAll(".mur-player")) {
                         player.classList.add("mur-selectable");
                     }
                     break;
                 }
-                case 'clientSelectTiles': {
+                case "clientSelectTiles": {
                     for (const tile of document.querySelectorAll(".mur-tile")) {
                         tile.classList.add("mur-selectable");
                     }
@@ -232,7 +233,7 @@ define([
         if (this.isCurrentPlayerActive()) {
             switch (stateName) {
                 case "inspect": {
-                    this.addActionButton('mur-inspect', _("Inspect"), () => {
+                    this.addActionButton("mur-inspect", _("Inspect"), () => {
                         this.request("inspect", {
                             tileId: this.selectedTile.dataset.id
                         });
@@ -240,18 +241,18 @@ define([
                     document.getElementById("mur-inspect").classList.add("disabled");
                     break;
                 }
-                case 'clientSelectTiles':
-                    this.addActionButton('nur-cancel', _("Cancel"), () => {
+                case "clientSelectTiles":
+                    this.addActionButton("mur-cancel", _("Cancel"), () => {
                         this.restoreServerGameState();
-                    }, null, null, 'red');
+                    }, null, null, "gray");
                     break;
-                case 'answer': {
+                case "answer": {
                     const that = this;
                     const answer = parseInt(args._private.answer);
 
                     function answerButton(id, label, answer, disable) {
                         that.addActionButton(id, label, () => {
-                            that.request('answer', {answer});
+                            that.request("answer", {answer});
                         });
                         document.getElementById(id).classList.toggle("disabled", disable);
                     }
@@ -260,15 +261,38 @@ define([
                     answerButton("mur-answer-no", _("No"), false, answer === 2);
                     break;
                 }
+                case "vote": {
+                    this.addActionButton("mur-vote", _("Vote"), () => {
+                        this.request("vote", {
+                            playerId: this.selectedPlayer.dataset.player
+                        }, () => {
+                            this.selectPlayer(null);
+                        });
+                    });
+                    document.getElementById("mur-vote").classList.add("disabled");
+                }
+            }
+        } else if (!this.isSpectator) {
+            switch (stateName) {
+                case "vote": {
+                    this.addActionButton("mur-cancel", _("Cancel"), () => {
+                        this.request("cancel", {});
+                    }, null, null, "gray");
+                    break;
+                }
             }
         }
     },
 
-    request(action, args) {
+    request(action, args, onSuccess) {
         this.ajaxcall(`/${gameName}/${gameName}/${action}.html`, {
             lock: true,
             ...args
-        }, () => {});
+        }, () => {
+            if (typeof onSuccess === "function") {
+                onSuccess();
+            }
+        });
     },
 
     selectItem(item, property) {
@@ -329,14 +353,19 @@ define([
     },
 
     onPlayerClick(player) {
+        const element = document.getElementById(`mur-player-${player.id}`);
+
         if (this.checkAction("ask", true)) {
-            const element = document.getElementById(`mur-player-${player.id}`);
             if (this.selectPlayer(element)) {
                 this.setClientState("clientSelectTiles", {
                     descriptionmyturn: _("${you} must select a tile to ask ${player_name} about"),
                     possibleactions: ["clientAsk"],
                     args: {player_name: `<span style="color: #${player.color}; -webkit-text-stroke: 0.5px black">${player.name}</span>`}
                 });
+            }
+        } else if (this.checkAction("vote", true)) {
+            if (this.selectPlayer(element)) {
+                document.getElementById("mur-vote").classList.remove("disabled");
             }
         }
     },
@@ -352,13 +381,13 @@ define([
 
     setupNotifications() {
         console.log("notifications subscriptions setup");
-        dojo.subscribe('inspect', this, data => {
+        dojo.subscribe("inspect", this, data => {
             console.log(data);
             const tile = document.querySelector(`#mur-tile-${data.args.tileId}`);
             tile.style.setProperty("--character", data.args.character);
             tile.classList.add("mur-flipped");
         });
 
-        this.notifqueue.setSynchronous('inspect', 500);
+        this.notifqueue.setSynchronous("inspect", 500);
     }
 }));

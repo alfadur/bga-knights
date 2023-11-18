@@ -12,6 +12,7 @@ class Game {
     setClientState(name, args) {}
     restoreServerGameState() {}
     get notifqueue() { return new notifqueue(); }
+    get isSpectator() { return false; }
 }
 
 
