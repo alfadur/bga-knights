@@ -31,6 +31,7 @@ class SevenKnightsBewitched extends Table
             Globals::ACTIONS_TAKEN => Globals::ACTIONS_TAKEN_ID,
             Globals::ASKER => Globals::ASKER_ID,
             Globals::ANSWER => Globals::ANSWER_ID,
+            Globals::ROUND => Globals::ROUND_ID,
 
             GameOption::MODE => GameOption::MODE_ID
         ]);
@@ -64,22 +65,38 @@ class SevenKnightsBewitched extends Table
         self::reattributeColorsBasedOnPreferences($players, $data['player_colors']);
         self::reloadPlayersBasicInfos();
 
-        $mode = self::getGameStateValue(GameOption::MODE);
-        self::setupPlayers(self::loadPlayersBasicInfos(), $data['player_colors'], $mode);
+        self::setupPlayers(self::loadPlayersBasicInfos(), $data['player_colors']);
+        self::setupTiles();
 
         $captain = (int)self::getUniqueValueFromDb(<<<EOF
             SELECT player_id AS id FROM player
             ORDER BY player_no ASC
             LIMIT 1
             EOF);
-        self::setGameStateInitialValue(Globals::ACTIONS_TAKEN, 0);
+
         self::setGameStateInitialValue(Globals::CAPTAIN, $captain);
-        self::setGameStateInitialValue(Globals::ASKER, 0);
-        self::setGameStateInitialValue(Globals::ANSWER, 0);
+        $this->gamestate->changeActivePlayer($captain);
     }
 
-    static function setupPlayers(array $players, array $colors, int $mode): void
+    static function setupPlayers(array $players, array $colors) {
+        $values = [];
+        foreach ($players as $playerId => ['player_color' => $color]) {
+            $token = array_search($color, $colors);
+            $values[] = "($playerId, $token)";
+        }
+
+        $args = implode(',', $values);
+        self::DbQuery(<<<EOF
+            INSERT INTO player_status(player_id, token)
+            VALUES $args
+            EOF);
+    }
+
+    function setupTiles(): void
     {
+        $players = $this->loadPlayersBasicInfos();
+        $mode = (int)self::getGameStateValue(GameOption::MODE);
+
         $tilesPerPlayer = 1;
         $additionalCharacters =
             $mode === GameMode::DISORDER ? 3 :
@@ -110,41 +127,52 @@ class SevenKnightsBewitched extends Table
         }
         shuffle($characters);
 
-        $playerValues = [];
-        $tileValues = [];
+        $tileIndex = 1;
+        $values = [];
 
-        foreach ($players as $playerId => ['player_color' => $color]) {
-            $token = array_search($color, $colors);
-
-            $playerValues[] = "($playerId, $token)";
-
+        foreach ($players as $playerId => $_) {
             for ($tile = 0; $tile < $tilesPerPlayer; ++$tile) {
                 $character = array_shift($characters);
-                $tileValues[] = "($playerId, $character)";
+                $values[] = "($tileIndex, $playerId, $character)";
+
+                self::notifyPlayer($playerId, 'inspect', clienttranslate('You are ${tileIcon}'), [
+                    'tileId' => $tileIndex,
+                    'character' => $character,
+                    'tileIcon' => $character,
+                    'preserve' => ['tileIcon']
+                ]);
+
+                ++$tileIndex;
             }
         }
 
         for ($i = 0; $i < $additionalCharacters; ++$i) {
             $character = array_shift($characters);
-            $tileValues[] = "(NULL, $character)";
+            $values[] = "($tileIndex, NULL, $character)";
+            ++$tileIndex;
         }
 
-        $tileArgs = implode(',', $tileValues);
+        $args = implode(',', $values);
         self::DbQuery(<<<EOF
-            INSERT INTO tile(player_id, `character`)
-            VALUES $tileArgs
-            EOF);
-
-        $playerArgs = implode(',', $playerValues);
-        self::DbQuery(<<<EOF
-            INSERT INTO player_status(player_id, token)
-            VALUES $playerArgs
+            INSERT INTO tile(tile_id, player_id, `character`)
+            VALUES $args
             EOF);
     }
 
     function getGameProgression()
     {
         return 0;
+    }
+
+    static function getTiles(int $currentPlayerId): array {
+        return self::getObjectListFromDb(<<<EOF
+            SELECT tile.player_id, tile_id AS id, 
+                   (CASE WHEN tile.player_id = $currentPlayerId
+                        OR tile_id = player_status.inspected
+                    THEN tile.`character` END) AS `character` 
+            FROM tile INNER JOIN player_status
+                ON player_status.player_id = $currentPlayerId            
+            EOF);
     }
 
     protected function getAllDatas()
@@ -158,14 +186,7 @@ class SevenKnightsBewitched extends Table
             FROM player NATURAL JOIN player_status
             EOF);
 
-        $tiles = self::getObjectListFromDb(<<<EOF
-            SELECT tile.player_id, tile_id AS id, 
-                   (CASE WHEN tile.player_id = $currentPlayerId
-                        OR tile_id = player_status.inspected
-                    THEN tile.`character` END) AS `character` 
-            FROM tile INNER JOIN player_status
-                ON player_status.player_id = $currentPlayerId            
-            EOF);
+        $tiles = self::getTiles($currentPlayerId);
 
         $gameMode = (int)self::getGameStateValue(GameOption::MODE);
         $hasWitch = $gameMode !== GameMode::TUTORIAL;
@@ -249,7 +270,7 @@ class SevenKnightsBewitched extends Table
 
         $valuesMask = $valuesMask & 0b1111111;
         if ($valuesMask === 0 || $valuesMask === 0b1111111) {
-            throw new BgaUserException("Invalid Number");
+            throw new BgaUserException('Invalid Number');
         }
 
         self::DbQuery(<<<EOF
@@ -328,14 +349,6 @@ class SevenKnightsBewitched extends Table
                 $this->gamestate->setPlayersMultiactive([$playerId], '');
             }
         }
-    }
-
-    function stDealTiles(): void
-    {
-        self::notifyAllPlayers('tiles', clienttranslate('Tiles are dealt'), []);
-        $captain = self::getGameStateValue(Globals::CAPTAIN);
-        $this->gamestate->changeActivePlayer($captain);
-        $this->gamestate->nextState('');
     }
 
     static function isWitchTeam(int $playerId): int {
@@ -438,9 +451,34 @@ class SevenKnightsBewitched extends Table
 
     }
 
-    function stRoundEnd(): void
+    function stNextRound(): void
     {
-        $this->gamestate->nextState('continue');
+        $round = self::getGameStateValue(Globals::ROUND);
+
+        if ($round < MAX_ROUNDS) {
+            self::incGameStateValue(Globals::ROUND, 1);
+
+            if ($round > 0 ) {
+                self::DbQuery(<<<EOF
+                    UPDATE player_status
+                    SET inspected = NULL, voted = NULL,
+                        asked = NULL, asked_tile = NULL,
+                        question = NULL, answer = NULL
+                    EOF);
+                self::DbQuery("DELETE FROM tile");
+
+                self::notifyAllPlayers('round', clienttranslate("New round begins"), []);
+
+                self::setupTiles();
+
+                self::setGameStateValue(Globals::ACTIONS_TAKEN, 0);
+                self::setGameStateValue(Globals::ASKER, 0);
+            }
+
+            $this->gamestate->nextState('continue');
+        } else {
+            $this->gamestate->nextState('end');
+        }
     }
 
     function argAnswer(): array
@@ -468,5 +506,10 @@ class SevenKnightsBewitched extends Table
     function upgradeTableDb($fromVersion)
     {
 
-    }    
+    }
+
+    function __skipRound()
+    {
+        $this->gamestate->jumpToState(State::NEXT_ROUND);
+    }
 }

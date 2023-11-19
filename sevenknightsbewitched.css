@@ -80,6 +80,16 @@
     perspective-origin: center;
 }
 
+#mur-play-area > .mur-tile {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    margin: auto;
+    transform: translateY(calc(-10px * var(--index)));
+}
+
 .mur-tile.mur-selectable {
     pointer-events: all;
 }
@@ -141,17 +151,6 @@
         transform: translate(-21px);
     }
 }
-
-/*.mur-tile:not(.mur-dealt) {
-    transform: translateY(calc(-10px * var(--index)));
-}
-
-.mur-tile.mur-dealt {
-    transform:
-            rotate(calc(var(--index) / var(--player-count) * 360deg))
-            translate(calc(var(--play-width) / 2 - 60px))
-            rotate(calc(var(--index) / var(--player-count) * -360deg));
-}*/
 
 .mur-tile-front, .mur-tile-side, .mur-tile-back {
     position: absolute;

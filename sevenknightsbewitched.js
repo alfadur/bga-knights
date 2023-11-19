@@ -38,7 +38,15 @@ function createPlayer(index, angle, player) {
     </div>`;
 }
 
-function createTiles(tiles, token) {
+function createTile(id) {
+    return `<div id="mur-tile-${id}" class="mur-tile" data-id="${id}" style="--index: ${id - 1}">
+            <div class="mur-tile-back"></div>                
+            <div class="mur-tile-front"></div>
+            <div class="mur-tile-side"></div>
+        </div>`;
+}
+
+function createDealtTiles(tiles, token) {
     const settings = [];
     if (token !== null) {
         token = parseInt(token);
@@ -73,9 +81,9 @@ function createTiles(tiles, token) {
     </div>`;
 }
 
-function createSpareTile(index) {
+function createLeftoverTile(index) {
     return `<div id="mur-space-tile-${index}" 
-                class="mur-tile mur-flipped" 
+                class="mur-tile mur-flipped mur-leftover" 
                 style="--character: ${index}">               
         <div class="mur-tile-front"></div>
     </div>`
@@ -124,8 +132,10 @@ define([
             return (parseInt(player.no) - 1 - currentIndex + playerCount) % playerCount;
         }
 
-        const freeTiles = data.tiles.filter(tile => tile.player_id === null);
-        const areaCount = freeTiles.length > 0 ? playerCount + 1 : playerCount;
+        const extraPlayer = data.tiles.some(tile =>
+            tile.player_id === null);
+
+        const areaCount = extraPlayer ? playerCount + 1 : playerCount;
 
         function createPlayerArea(player, tiles, index) {
             const angle = 90 + index * 360 / areaCount;
@@ -141,7 +151,7 @@ define([
             }
 
             const tileContainer = createElement(playerArea,
-                createTiles(tiles, player && player.token));
+                createDealtTiles(tiles, player && player.token));
 
             for (const tile of tileContainer.querySelectorAll(".mur-tile")) {
                 console.log("New tile", tile);
@@ -156,12 +166,13 @@ define([
         for (const playerId of playerIds) {
             const player = players[playerId];
             const index = sortKey(player);
+            const tiles = data.tiles.filter(tile => tile.player_id === playerId);
 
-            createPlayerArea.call(this, player, data.tiles.filter(tile =>
-                tile.player_id === playerId), index);
+            createPlayerArea.call(this, player, tiles, index);
         }
 
-        if (freeTiles.length > 0) {
+        if (extraPlayer) {
+            const freeTiles = data.tiles.filter(tile => tile.player_id === null);
             createPlayerArea.call(this, null, freeTiles, areaCount - 1);
         }
 
@@ -171,7 +182,7 @@ define([
 
         Array.from(document.querySelectorAll(" .mur-placeholder")).forEach((place, index) => {
             if (index > maxTile) {
-                createElement(place, createSpareTile(index + 1), undefined);
+                createElement(place, createLeftoverTile(index + 1), undefined);
             }
         });
 
@@ -194,7 +205,9 @@ define([
                 case "question":
                 case "vote": {
                     for (const player of document.querySelectorAll(".mur-player")) {
-                        player.classList.add("mur-selectable");
+                        if (player.dataset.player !== "none") {
+                            player.classList.add("mur-selectable");
+                        }
                     }
                     break;
                 }
@@ -214,7 +227,8 @@ define([
         if (this.isCurrentPlayerActive()) {
             switch (stateName) {
                 case "inspect":
-                case "clientSelectTiles": {
+                case "clientSelectTiles":
+                case "vote": {
                     clearTag("mur-selectable");
                     this.selectTile(null);
                     this.selectPlayer(null);
@@ -381,6 +395,14 @@ define([
 
     setupNotifications() {
         console.log("notifications subscriptions setup");
+        dojo.subscribe("round", this, () => {
+            const tiles = document.querySelectorAll(".mur-tile:not(.mur-leftover)");
+            for (const tile of tiles) {
+                tile.classList.remove("mur-flipped");
+            }
+        });
+        this.notifqueue.setSynchronous('round', 600);
+
         dojo.subscribe("inspect", this, data => {
             console.log(data);
             const tile = document.querySelector(`#mur-tile-${data.args.tileId}`);

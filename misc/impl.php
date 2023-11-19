@@ -23,7 +23,7 @@ class Table {
         $this->gamestate = new GameState();
     }
     static function reloadPlayersBasicInfos(): void {}
-    static function loadPlayersBasicInfos(): array { return []; }
+    function loadPlayersBasicInfos(): array { return []; }
     static function reattributeColorsBasedOnPreferences(array $players, array $colors): void {}
     static function getGameinfos(): array {return [];}
     static function getPlayersNumber(): int { return 0; }

@@ -8,12 +8,12 @@
 -- -----
 
 CREATE TABLE IF NOT EXISTS `tile`(
-    `tile_id` TINYINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `tile_id` TINYINT UNSIGNED NOT NULL,
     `player_id` INT UNSIGNED NULL,
-    `character` TINYINT UNSIGNED NOT NULL,
+    `character` TINYINT UNSIGNED NULL,
     PRIMARY KEY(`tile_id`),
     FOREIGN KEY(`player_id`) REFERENCES `player`(`player_id`)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8 AUTO_INCREMENT=1;
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE IF NOT EXISTS player_status(
     `player_id` INT UNSIGNED NOT NULL,

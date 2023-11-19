@@ -43,7 +43,7 @@ interface State {
     const DISPATCH_ACTION = 8;
     const DEPLOY_KNIGHTS = 9;
     const FINAL_CHECK = 10;
-    const ROUND_END = 11;
+    const NEXT_ROUND = 11;
 
     const GAME_END = 99;
 }
@@ -57,4 +57,8 @@ interface Globals {
     const ASKER_ID = 12;
     const ANSWER = 'answer';
     const ANSWER_ID = 13;
+    const ROUND = 'round';
+    const ROUND_ID = 14;
 }
+
+const MAX_ROUNDS = 100;

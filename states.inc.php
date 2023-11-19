@@ -55,15 +55,7 @@ $machinestates = [
         Fsm::TYPE => FsmType::MANAGER,
         Fsm::DESCRIPTION => '',
         Fsm::ACTION => 'stGameSetup',
-        Fsm::TRANSITIONS => ['' => State::DEAL_TILES]
-    ],
-
-    State::DEAL_TILES => [
-        Fsm::NAME => 'dealTiles',
-        Fsm::TYPE => FsmType::GAME,
-        Fsm::DESCRIPTION => clienttranslate('Tiles are dealt'),
-        Fsm::ACTION => 'stDealTiles',
-        Fsm::TRANSITIONS => ['' => State::INSPECT]
+        Fsm::TRANSITIONS => ['' => State::NEXT_ROUND]
     ],
 
     State::INSPECT => [
@@ -111,7 +103,7 @@ $machinestates = [
         Fsm::ACTION => 'stAppoint',
         Fsm::TRANSITIONS => [
             'appoint' => State::DEPLOY_KNIGHTS,
-            'end' => State::ROUND_END
+            'end' => State::NEXT_ROUND
         ]
     ],
 
@@ -143,16 +135,16 @@ $machinestates = [
         Fsm::TYPE => FsmType::GAME,
         Fsm::DESCRIPTION => '',
         Fsm::ACTION => 'stFinalCheck',
-        Fsm::TRANSITIONS => ['' => State::ROUND_END]
+        Fsm::TRANSITIONS => ['' => State::NEXT_ROUND]
     ],
 
-    State::ROUND_END => [
-        Fsm::NAME => 'roundEnd',
+    State::NEXT_ROUND => [
+        Fsm::NAME => 'nextRound',
         Fsm::TYPE => FsmType::GAME,
         Fsm::DESCRIPTION => '',
-        Fsm::ACTION => 'stRoundEnd',
+        Fsm::ACTION => 'stNextRound',
         Fsm::TRANSITIONS => [
-            'continue' => State::DEAL_TILES,
+            'continue' => State::INSPECT,
             'end' => State::GAME_END
         ]
     ],
