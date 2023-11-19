@@ -52,6 +52,9 @@ class Table {
     static function checkAction(string $action): void {}
     static function notifyAllPlayers(string $name, string $text, array $args): void {}
     static function notifyPlayer(string $playerId, string $name, string $text, array $args): void {}
+
+    static function debug(string $message) {}
+    static function dump(string $message, $value) {}
 }
 
 class game_view_page {

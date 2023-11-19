@@ -105,9 +105,11 @@ class SevenKnightsBewitched extends Table
         switch ($mode) {
             case GameMode::STANDARD:
                 $characters = range(0,count($players) + $additionalCharacters - 1);
+                shuffle($characters);
                 break;
             case GameMode::TUTORIAL:
                 $characters = range(1, count($players) + $additionalCharacters);
+                shuffle($characters);
                 break;
             case GameMode::ADVANCED:
                 $characters = range(0, 7);
@@ -125,7 +127,6 @@ class SevenKnightsBewitched extends Table
                 $characters = array_merge($characters, array_slice($batch, 0, $additionalCharacters));
                 break;
         }
-        shuffle($characters);
 
         $tileIndex = 1;
         $values = [];
