@@ -18,16 +18,29 @@ CREATE TABLE IF NOT EXISTS `tile`(
 CREATE TABLE IF NOT EXISTS player_status(
     `player_id` INT UNSIGNED NOT NULL,
     `token` TINYINT UNSIGNED NOT NULL,
-    `inspected` TINYINT UNSIGNED NULL,
-    `asked` INT UNSIGNED NULL,
-    `asked_tile` TINYINT UNSIGNED NULL,
-    `question` TINYINT UNSIGNED NULL,
-    `answer` TINYINT UNSIGNED NULL,
     `voted` INT UNSIGNED NULL,
     PRIMARY KEY(`player_id`),
     FOREIGN KEY(`player_id`) REFERENCES `player`(`player_id`),
-    FOREIGN KEY(`voted`) REFERENCES `player`(`player_id`),
-    FOREIGN KEY(`inspected`) REFERENCES `tile`(`tile_id`),
-    FOREIGN KEY(`asked`) REFERENCES `player`(`player_id`),
-    FOREIGN KEY(`asked_tile`) REFERENCES `tile`(`tile_id`)
+    FOREIGN KEY(`voted`) REFERENCES `player`(`player_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE TABLE IF NOT EXISTS `inspection`(
+    `player_id` INT UNSIGNED NOT NULL,
+    `tile_id` TINYINT UNSIGNED NOT NULL,
+    PRIMARY KEY(`player_id`, `tile_id`),
+    FOREIGN KEY(`player_id`) REFERENCES `player`(`player_id`),
+    FOREIGN KEY(`tile_id`) REFERENCES `tile`(`tile_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8;
+
+CREATE TABLE IF NOT EXISTS `question`(
+    `question_id` TINYINT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `player_id` INT UNSIGNED NOT NULL,
+    `recipient_id` INT UNSIGNED NOT NULL,
+    `tile_id` TINYINT UNSIGNED NOT NULL,
+    `question` TINYINT UNSIGNED NOT NULL,
+    `answer` TINYINT UNSIGNED NULL,
+    PRIMARY KEY(`question_id`),
+    FOREIGN KEY(`player_id`) REFERENCES `player`(`player_id`),
+    FOREIGN KEY(`recipient_id`) REFERENCES `player`(`player_id`),
+    FOREIGN KEY(`tile_id`) REFERENCES `tile`(`tile_id`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8 AUTO_INCREMENT=1;

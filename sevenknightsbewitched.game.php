@@ -167,12 +167,13 @@ class SevenKnightsBewitched extends Table
 
     static function getTiles(int $currentPlayerId): array {
         return self::getObjectListFromDb(<<<EOF
-            SELECT tile.player_id, tile_id AS id, 
-                   (CASE WHEN tile.player_id = $currentPlayerId
-                        OR tile_id = player_status.inspected
-                    THEN tile.`character` END) AS `character` 
-            FROM tile INNER JOIN player_status
-                ON player_status.player_id = $currentPlayerId            
+            SELECT tile.player_id, tile.tile_id AS id, 
+               (CASE WHEN tile.player_id = $currentPlayerId
+                    OR inspection.tile_id IS NOT NULL
+                THEN tile.`character` END) AS `character` 
+            FROM tile LEFT JOIN inspection
+                ON inspection.player_id = $currentPlayerId
+                    AND inspection.tile_id = tile.tile_id
             EOF);
     }
 
@@ -183,7 +184,7 @@ class SevenKnightsBewitched extends Table
         $players = self::getCollectionFromDb(<<<EOF
             SELECT player_id AS id, player_score AS score, 
                    player_name AS name, player_color AS color, 
-                   player_no AS no, token, inspected
+                   player_no AS no, token
             FROM player NATURAL JOIN player_status
             EOF);
 
@@ -220,9 +221,10 @@ class SevenKnightsBewitched extends Table
         }
 
         self::DbQuery(<<<EOF
-            UPDATE player_status AS self 
-                INNER JOIN tile AS target ON tile_id = $tileId
-            SET inspected = $tileId
+            INSERT INTO inspection(player_id, tile_id)
+            SELECT self.player_id, tile_id
+            FROM player_status AS self 
+                INNER JOIN tile AS target ON tile_id = $tileId     
             WHERE self.player_id = $activePlayerId                 
                 AND $targetCheck
             EOF);
@@ -275,19 +277,25 @@ class SevenKnightsBewitched extends Table
         }
 
         self::DbQuery(<<<EOF
-            UPDATE player_status AS self
-                INNER JOIN player_status as recipient
-                    ON recipient.player_id = $playerId
+            INSERT INTO question(player_id, recipient_id, tile_id, question)
+            SELECT self.player_id, recipient.player_id, target.tile_id, $valuesMask
+            FROM player_status AS self
+                LEFT JOIN inspection 
+                    ON inspection.player_id = self.player_id 
+                       AND inspection.tile_id = $tileId
+                INNER JOIN (
+                    SELECT player_id, (tile_id = $tileId) AS inspected
+                    FROM player_status NATURAL JOIN inspection
+                    GROUP BY player_id, inspected
+                ) AS recipient ON recipient.player_id = $playerId
                 INNER JOIN tile AS target 
-                    ON tile_id = $tileId
-            SET self.asked = $playerId, 
-                self.asked_tile = $tileId, 
-                self.question = $valuesMask 
-            WHERE self.player_id = $activePlayerId
-                AND self.inspected <> tile_id
-                AND (recipient.player_id = target.player_id 
-                    OR recipient.inspected = tile_id)
+                    ON target.tile_id = $tileId             
+            WHERE self.player_id = $activePlayerId               
+                AND inspection.tile_id IS NULL 
+                AND (target.player_id = recipient.player_id 
+                    XOR recipient.inspected)
             EOF);
+
         if (self::DbAffectedRow() === 0) {
             throw new BgaUserException('Invalid player/tile');
         }
@@ -310,9 +318,9 @@ class SevenKnightsBewitched extends Table
 
         $activePlayerId = self::getActivePlayerId();
         self::DbQuery(<<<EOF
-            UPDATE player_status
+            UPDATE question
             SET answer = $answer
-            WHERE player_id = $asker
+            WHERE answer IS NULL
             EOF);
         $this->gamestate->nextState('');
     }
@@ -355,11 +363,13 @@ class SevenKnightsBewitched extends Table
     static function isWitchTeam(int $playerId): int {
         return (int)self::getUniqueValueFromDb(<<<EOF
             SELECT COUNT(*)
-            FROM player_status AS self INNER JOIN tile as target 
-                ON tile_id = self.inspected 
-                    OR target.player_id = self.player_id
+            FROM player_status AS self 
+                NATURAL JOIN inspection
+                INNER JOIN tile 
+                    ON tile.tile_id = inspection.tile_id 
+                        OR tile.player_id = self.player_id
             WHERE self.player_id = $playerId 
-              AND target.`character` = 0
+              AND tile.`character` = 0
             EOF);
     }
 
@@ -413,17 +423,19 @@ class SevenKnightsBewitched extends Table
     {
         $asker = (int)self::getGameStateValue(Globals::ASKER);
         if ($asker !== 0) {
-            ['asked' => $asked, 'asked_tile' => $askedTile, 'question' => $question, 'answer' => $answer] =
-                self::getNonEmptyObjectFromDb(<<<EOF
-                    SELECT asked, asked_tile, question, answer 
-                    FROM player_status
-                    WHERE player_id = $asker; 
-                    EOF);
-            if ($answer === null) {
+            $questionData = self::getObjectFromDb(<<<EOF
+                SELECT recipient_id, tile_id, question 
+                FROM question
+                WHERE answer IS NULL; 
+                EOF);
+            if ($questionData !== null) {
+                ['recipient_id' => $asked, 'tile_id' => $askedTile, 'question' => $question] = $questionData;
+
                 self::setGameStateValue(Globals::ANSWER,
                     $this->determineAnswer($asked, $askedTile, $question));
                 $this->gamestate->changeActivePlayer($asked);
                 $this->gamestate->nextState('answer');
+
                 return;
             }
 
@@ -461,12 +473,11 @@ class SevenKnightsBewitched extends Table
 
             if ($round > 0 ) {
                 self::DbQuery(<<<EOF
-                    UPDATE player_status
-                    SET inspected = NULL, voted = NULL,
-                        asked = NULL, asked_tile = NULL,
-                        question = NULL, answer = NULL
+                    DELETE tile, inspection, question 
+                    FROM tile 
+                        INNER JOIN inspection USING (tile_id) 
+                        INNER JOIN question USING (player_id)
                     EOF);
-                self::DbQuery("DELETE FROM tile");
 
                 self::notifyAllPlayers('round', clienttranslate("New round begins"), []);
 
