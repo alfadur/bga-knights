@@ -102,7 +102,7 @@ $machinestates = [
         Fsm::DESCRIPTION => '',
         Fsm::ACTION => 'stAppoint',
         Fsm::TRANSITIONS => [
-            'appoint' => State::DEPLOY_KNIGHTS,
+            'appoint' => State::QUESTION,
             'end' => State::NEXT_ROUND
         ]
     ],
@@ -116,7 +116,8 @@ $machinestates = [
             'inspect' => State::INSPECT,
             'question' => State::QUESTION,
             'answer' => State::ANSWER,
-            'vote' => State::VOTE]
+            'vote' => State::VOTE,
+            'deploy' => State::DEPLOY_KNIGHTS]
     ],
 
     State::DEPLOY_KNIGHTS => [
@@ -125,6 +126,7 @@ $machinestates = [
         Fsm::DESCRIPTION => clienttranslate('${actplayer} must choose a knight to deploy to position ${n}'),
         Fsm::OWN_DESCRIPTION => clienttranslate('${you} must choose a knight to deploy to position ${n}'),
         Fsm::ARGUMENTS => 'argDeployKnights',
+        Fsm::POSSIBLE_ACTIONS => ['deploy', 'end'],
         Fsm::TRANSITIONS => [
             'deploy' => State::DEPLOY_KNIGHTS,
             'check' => State::FINAL_CHECK]
@@ -133,7 +135,6 @@ $machinestates = [
     State::FINAL_CHECK => [
         Fsm::NAME => 'finalCheck',
         Fsm::TYPE => FsmType::GAME,
-        Fsm::DESCRIPTION => '',
         Fsm::ACTION => 'stFinalCheck',
         Fsm::TRANSITIONS => ['' => State::NEXT_ROUND]
     ],

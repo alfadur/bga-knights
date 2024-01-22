@@ -18,19 +18,15 @@ $game_options = [
         'default' => GameMode::STANDARD,
         'values' => [
             GameMode::STANDARD => [
-                'name' => totranslate('Standard'),
-                'tmdisplay' => totranslate('Standard')
-            ],
-            GameMode::TUTORIAL => [
-                'name' => totranslate('Learning'),
-                'is_coop' => true
+                'name' => totranslate('Basic Rules'),
+                'tmdisplay' => totranslate('')
             ],
             GameMode::DISORDER => [
-                'name' => totranslate('Double Tiles'),
+                'name' => totranslate('Groping in the dark'),
                 'description' => totranslate('Each player has two tiles instead of one')
             ],
             GameMode::ADVANCED => [
-                'name' => totranslate('Advanced'),
+                'name' => totranslate('Advanced rules'),
                 'nobeginner' => true
             ]
         ],

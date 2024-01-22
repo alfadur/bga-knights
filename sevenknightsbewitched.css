@@ -43,10 +43,14 @@
 }
 
 .mur-player.mur-selectable:hover, .mur-player.mur-selected {
-    border: 3px solid black;
+    box-shadow: 0 0 12px #feda15;
+    background: #d2bf8e8f;
 }
 
 .mur-player-name {
+    position: absolute;
+    width: 100%;
+    margin: auto;
     font-weight: bold;
     font-size: 16px;
     text-align: center;
@@ -78,6 +82,7 @@
             box-shadow 200ms ease-out;
     perspective: 200px;
     perspective-origin: center;
+    pointer-events: none;
 }
 
 #mur-play-area > .mur-tile {
@@ -102,56 +107,6 @@
     box-shadow: 0 0 16px #33ffa9;
 }
 
-.mur-tile:after {
-    content: "";
-    opacity: 0;
-    transition: opacity 1000ms ease-out;
-}
-
-.mur-tile.mur-owned:after {
-    position: absolute;
-    width: var(--token-size);
-    height: var(--token-size);
-    right: 5px;
-    top: 4px;
-    border-radius: 12px;
-    box-shadow: 0 1px 2px black;
-    opacity: 1;
-    transform-origin: center;
-    background-image: url("img/tokens.jpg");
-    background-size:
-        calc(var(--token-size) * 4)
-        calc(var(--token-size) * 2);
-    background-position:
-        calc(var(--token-size) * var(--token-x) * -1)
-        calc(var(--token-size) * var(--token-y) * -1);
-}
-
-.mur-tile.mur-flipped:after {
-    animation-name: mur-bounce-forward;
-    animation-duration: 1000ms;
-    animation-timing-function: ease-out;
-    animation-fill-mode: forwards;
-}
-
-@keyframes mur-bounce-backward {
-    50% {
-        transform: scale(1.5) translate(-3px, -75%);
-    }
-    to {
-        transform: none;
-    }
-}
-
-@keyframes mur-bounce-forward {
-    50% {
-        transform: scale(1.5) translate(-5px, -75%);
-    }
-    to {
-        transform: translate(-21px);
-    }
-}
-
 .mur-tile-front, .mur-tile-side, .mur-tile-back {
     position: absolute;
     transition: transform 800ms ease-in-out;
@@ -167,21 +122,54 @@
     box-shadow: 0 1px 2px black;
 }
 
+.mur-tile-front::after, .mur-tile-back::after {
+    content: "";
+    transition: opacity 1000ms ease-out;
+    position: absolute;
+    opacity: 0;
+}
+
+.mur-tile.mur-owned .mur-tile-front::after,
+.mur-tile.mur-owned .mur-tile-back::after {
+    width: var(--token-size);
+    height: var(--token-size);
+    top: 4px;
+    border-radius: 12px;
+    box-shadow: 0 0.5px 0.5px black;
+    opacity: 1;
+    transform-origin: center;
+    background-image: url("img/tokens.jpg");
+    background-size:
+        calc(var(--token-size) * 4)
+        calc(var(--token-size) * 2);
+    background-position:
+        calc(var(--token-size) * var(--token-x) * -1)
+        calc(var(--token-size) * var(--token-y) * -1);
+}
+
+.mur-tile.mur-owned .mur-tile-front::after {
+    right: 26px;
+}
+
+.mur-tile.mur-owned .mur-tile-back::after {
+    right: 5px;
+}
+
 .mur-tile-front {
     transform:
-            rotateY(180deg)
-            translateZ(calc(var(--tile-depth) / 2));
+        rotateY(180deg)
+        translateZ(calc(var(--tile-depth) / 2));
     background-image: url("img/knights.jpg");
     background-size:
-            calc(var(--tile-width) * 9)
-            var(--tile-height);
+        calc(var(--tile-width) * 9)
+        var(--tile-height);
     background-position: calc(var(--character) * var(--tile-width) * -1);
 }
 
 .mur-tile.mur-flipped .mur-tile-front {
     transform:
-            rotateY(0deg)
-            translateZ(calc(var(--tile-depth) / 2));
+        rotateY(0deg)
+        translateZ(calc(var(--tile-depth) / 2));
 }
 
 .mur-tile-side {
@@ -189,22 +177,22 @@
     height: 100%;
     background: darkgray;
     transform:
-            translateX(calc((var(--tile-width) - var(--tile-depth)) / 2))
-            rotateY(90deg)
-            translateZ(calc(var(--tile-width) / 2));
+        translateX(calc((var(--tile-width) - var(--tile-depth)) / 2))
+        rotateY(90deg)
+        translateZ(calc(var(--tile-width) / 2));
 }
 
 .mur-tile.mur-flipped .mur-tile-side {
     transform:
-            translateX(calc((var(--tile-width) - var(--tile-depth)) / 2))
-            rotateY(-90deg)
-            translateZ(calc(var(--tile-width) / 2));
+        translateX(calc((var(--tile-width) - var(--tile-depth)) / 2))
+        rotateY(-90deg)
+        translateZ(calc(var(--tile-width) / 2));
 }
 
 .mur-tile-back {
     transform:
-            rotateY(0deg)
-            translateZ(calc(var(--tile-depth) / 2));
+        rotateY(0deg)
+        translateZ(calc(var(--tile-depth) / 2));
     background-image: url("img/knights.jpg");
     background-size:
         calc(var(--tile-width) * 9)
@@ -214,8 +202,8 @@
 
 .mur-tile.mur-flipped .mur-tile-back {
     transform:
-            rotateY(-180deg)
-            translateZ(calc(var(--tile-depth) / 2));
+        rotateY(-180deg)
+        translateZ(calc(var(--tile-depth) / 2));
 }
 
 #mur-deployment {
@@ -239,13 +227,13 @@
     outline: dotted #7e6b27 4px;
 }
 
-.mur-placeholder:after, .mur-single-number:after {
+.mur-placeholder::after, .mur-single-number::after {
     content: attr(data-number);
     font-family: "Arial Black", sans-serif;
     font-weight: bolder;
 }
 
-.mur-placeholder:after {
+.mur-placeholder::after {
     line-height: var(--tile-height);
     font-size: calc(var(--tile-height) / 3);
     color: #5e4018;
@@ -292,17 +280,17 @@
     border-color: #ffdc53;
 }
 
-.mur-single-number:after {
+.mur-single-number::after {
     font-size: 34px;
     color: #cacaca;
     transition: color 100ms ease-in;
 }
 
-.mur-single-number.mur-selected:after {
+.mur-single-number.mur-selected::after {
     color: #e4faff;
 }
 
-.mur-single-number.mur-selected:hover:after {
+.mur-single-number.mur-selected:hover::after {
     color: #ffdc53;
 }
 

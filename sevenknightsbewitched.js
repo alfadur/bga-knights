@@ -173,7 +173,9 @@ define([
 
         if (extraPlayer) {
             const freeTiles = data.tiles.filter(tile => tile.player_id === null);
-            createPlayerArea.call(this, null, freeTiles, areaCount - 1);
+            for (const tile of freeTiles) {
+                createPlayerArea.call(this, null, freeTiles, areaCount - 1);
+            }
         }
 
         const maxTile = data.hasWitch ?
@@ -411,5 +413,21 @@ define([
         });
 
         this.notifqueue.setSynchronous("inspect", 500);
+    },
+
+    format_string_recursive(log, args) {
+        if (args && !("substitutionComplete" in args)) {
+            args.substitutionComplete = true;
+            const formatters = {};
+            for (const iconType of Object.keys(formatters)) {
+                const icons = Object.keys(args).filter(name => name.startsWith(`${iconType}Icon`));
+
+                for (const icon of icons) {
+                    const values = args[icon].toString().split(",");
+                    args[icon] = formatters[iconType].call(this, ...values);
+                }
+            }
+        }
+        return this.inherited({callee: this.format_string_recursive}, arguments);
     }
 }));

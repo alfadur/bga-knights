@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS `tile`(
     `tile_id` TINYINT UNSIGNED NOT NULL,
     `player_id` INT UNSIGNED NULL,
     `character` TINYINT UNSIGNED NULL,
+    `deployment` TINYINT UNSIGNED NULL,
     PRIMARY KEY(`tile_id`),
     FOREIGN KEY(`player_id`) REFERENCES `player`(`player_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
@@ -29,7 +30,7 @@ CREATE TABLE IF NOT EXISTS `inspection`(
     `tile_id` TINYINT UNSIGNED NOT NULL,
     PRIMARY KEY(`player_id`, `tile_id`),
     FOREIGN KEY(`player_id`) REFERENCES `player`(`player_id`),
-    FOREIGN KEY(`tile_id`) REFERENCES `tile`(`tile_id`)
+    FOREIGN KEY(`tile_id`) REFERENCES `tile`(`tile_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8;
 
 CREATE TABLE IF NOT EXISTS `question`(
@@ -42,5 +43,5 @@ CREATE TABLE IF NOT EXISTS `question`(
     PRIMARY KEY(`question_id`),
     FOREIGN KEY(`player_id`) REFERENCES `player`(`player_id`),
     FOREIGN KEY(`recipient_id`) REFERENCES `player`(`player_id`),
-    FOREIGN KEY(`tile_id`) REFERENCES `tile`(`tile_id`)
+    FOREIGN KEY(`tile_id`) REFERENCES `tile`(`tile_id`) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8 AUTO_INCREMENT=1;

@@ -69,6 +69,14 @@ class action_sevenknightsbewitched extends APP_GameAction
         self::ajaxResponse();
     }
 
+    public function deploy() {
+        self::setAjaxMode();
+        $tileId = self::getArg('tileId', AT_posint, true);
+        $position = self::getArg('position', AT_posint, true);
+        $this->game->deploy($tileId, $position);
+        self::ajaxResponse();
+    }
+
     public function cancel()
     {
         self::setAjaxMode();

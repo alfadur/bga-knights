@@ -7,13 +7,6 @@
   * This code has been produced on the BGA studio platform for use on http://boardgamearena.com.
   * See http://en.boardgamearena.com/#!doc/Studio for more information.
   * -----
-  * 
-  * sevenknightsbewitched.game.php
-  *
-  * This is the main file for your game logic.
-  *
-  * In this PHP file, you are going to defines the rules of the game.
-  *
   */
 
 
@@ -37,7 +30,7 @@ class SevenKnightsBewitched extends Table
         ]);
     }
 
-    protected function getGameName( )
+    protected function getGameName()
     {
 		// Used for translations and stuff. Please do not modify.
         return "sevenknightsbewitched";
@@ -224,7 +217,7 @@ class SevenKnightsBewitched extends Table
             INSERT INTO inspection(player_id, tile_id)
             SELECT self.player_id, tile_id
             FROM player_status AS self 
-                INNER JOIN tile AS target ON tile_id = $tileId     
+                INNER JOIN tile AS target ON tile_id = $tileId
             WHERE self.player_id = $activePlayerId                 
                 AND $targetCheck
             EOF);
@@ -278,22 +271,21 @@ class SevenKnightsBewitched extends Table
 
         self::DbQuery(<<<EOF
             INSERT INTO question(player_id, recipient_id, tile_id, question)
-            SELECT self.player_id, recipient.player_id, target.tile_id, $valuesMask
+            SELECT $activePlayerId, $playerId, $tileId, $valuesMask
             FROM player_status AS self
-                LEFT JOIN inspection 
-                    ON inspection.player_id = self.player_id 
-                       AND inspection.tile_id = $tileId
-                INNER JOIN (
-                    SELECT player_id, (tile_id = $tileId) AS inspected
-                    FROM player_status NATURAL JOIN inspection
-                    GROUP BY player_id, inspected
-                ) AS recipient ON recipient.player_id = $playerId
-                INNER JOIN tile AS target 
-                    ON target.tile_id = $tileId             
-            WHERE self.player_id = $activePlayerId               
-                AND inspection.tile_id IS NULL 
-                AND (target.player_id = recipient.player_id 
-                    XOR recipient.inspected)
+                INNER JOIN tile ON tile.tile_id = $tileId
+                LEFT JOIN inspection as self_seen 
+                    ON self_seen.player_id = $activePlayerId 
+                       AND self_seen.tile_id = $tileId
+                LEFT JOIN inspection as other_seen
+                    ON other_seen.player_id = $playerId 
+                       AND other_seen.tile_id = $tileId
+            WHERE self.player_id = $activePlayerId
+                AND (tile.player_id <> $activePlayerId 
+                     OR tile.player_id IS NULL)
+                AND self_seen.tile_id IS NULL 
+                AND (tile.player_id = $playerId 
+                    OR other_seen.tile_id IS NOT NULL)
             EOF);
 
         if (self::DbAffectedRow() === 0) {
@@ -360,6 +352,25 @@ class SevenKnightsBewitched extends Table
         }
     }
 
+    function deploy(int $tileId, int $position)
+    {
+        if ($position >= 0) {
+            new BgaUserException('Invalid position');
+        }
+        self::DbQuery(<<<EOF
+            UPDATE tile
+            SET deployment = $position
+            WHERE tile_id = $tileId
+            EOF);
+
+        $count = self::getUniqueValueFromDb(
+            'SELECT COUNT(deployment) FROM tile');
+
+        $continue = $count < self::getPlayersNumber();
+        $this->gamestate->nextState(
+            $continue ? 'deploy' : 'check');
+    }
+
     static function isWitchTeam(int $playerId): int {
         return (int)self::getUniqueValueFromDb(<<<EOF
             SELECT COUNT(*)
@@ -409,6 +420,8 @@ class SevenKnightsBewitched extends Table
             'player_name' => $playerName
         ]);
 
+        $this->gamestate->changeActivePlayer($captain);
+
         if (self::isWitchTeam($captain)) {
             self::notifyAllPlayers('message', clienttranslate('${player_name} belongs to the Witch Team'), [
                 'player_name' => $playerName
@@ -448,7 +461,10 @@ class SevenKnightsBewitched extends Table
 
         $playersCount = $this->getPlayersNumber();
         $actionsTaken = self::getGameStateValue(Globals::ACTIONS_TAKEN);
-        if ($actionsTaken >= ($inspectsPerPlayer + 1) * $playersCount) {
+        if ($actionsTaken > ($inspectsPerPlayer + 1) * $playersCount) {
+            self::setGameStateValue(Globals::DEPLOYMENT, 0);
+            $this->gamestate->nextState('deploy');
+        } else if ($actionsTaken >= ($inspectsPerPlayer + 1) * $playersCount) {
             $this->gamestate->nextState('vote');
         } else if ($actionsTaken >= $inspectsPerPlayer * $playersCount) {
             self::activeNextPlayer();
@@ -461,7 +477,22 @@ class SevenKnightsBewitched extends Table
 
     function stFinalCheck(): void
     {
+        $deployment = (int)self::getGameStateValue(Globals::DEPLOYMENT);
+        $count = $deployment & 0b1111;
 
+        $order = self::getObjectListFromDb(<<<EOF
+            SELECT `character` FROM tile
+            WHERE `character` > 0
+            ORDER BY `character` ASC
+            EOF, true);
+
+        foreach ($order as $index => $character) {
+            if ($index >= $count
+                || ($deployment >> (($index + 1) * 4)) !== (int)$character)
+            {
+
+            }
+        }
     }
 
     function stNextRound(): void
@@ -472,12 +503,17 @@ class SevenKnightsBewitched extends Table
             self::incGameStateValue(Globals::ROUND, 1);
 
             if ($round > 0 ) {
-                self::DbQuery(<<<EOF
-                    DELETE tile, inspection, question 
-                    FROM tile 
-                        INNER JOIN inspection USING (tile_id) 
-                        INNER JOIN question USING (player_id)
+                $nextPlayer = self::getUniqueValueFromDb(<<<EOF
+                    SELECT player_id 
+                    FROM player_status NATURAL JOIN tile
+                    WHERE `character` > 0
+                    ORDER BY `character` ASC
+                    LIMIT 1
                     EOF);
+                $this->gamestate->changeActivePlayer($nextPlayer);
+
+                self::DbQuery('DELETE FROM tile');
+                self::DbQuery('UPDATE player_status SET voted = NULL');
 
                 self::notifyAllPlayers('round', clienttranslate("New round begins"), []);
 
@@ -485,6 +521,7 @@ class SevenKnightsBewitched extends Table
 
                 self::setGameStateValue(Globals::ACTIONS_TAKEN, 0);
                 self::setGameStateValue(Globals::ASKER, 0);
+                self::setGameStateValue(Globals::CAPTAIN, (int)$nextPlayer);
             }
 
             $this->gamestate->nextState('continue');
@@ -501,6 +538,14 @@ class SevenKnightsBewitched extends Table
                     'answer' => self::getGameStateValue(Globals::ANSWER)
                 ]
             ]
+        ];
+    }
+
+    function argDeployKnights(): array
+    {
+        $deployment = (int)self::getGameStateValue(Globals::DEPLOYMENT);
+        return [
+            'deployment' => $deployment
         ];
     }
 
