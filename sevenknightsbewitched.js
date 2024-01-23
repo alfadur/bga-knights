@@ -412,13 +412,32 @@ define([
             tile.classList.add("mur-flipped");
         });
 
+        dojo.subscribe("question", this, data => {
+            console.log(data);
+        })
+
         this.notifqueue.setSynchronous("inspect", 500);
+    },
+
+    formatNumbers(bitmask) {
+        bitmask = parseInt(bitmask);
+        const values = [];
+        for (i = 0; i < 7; ++i) {
+            if (bitmask & (1 << i)) {
+                values.push(i + 1);
+            }
+        }
+        return values
+            .map(n => `<div class="mur-single-number mur-icon mur-selected" data-number="${n}"></div>`)
+            .join("");
     },
 
     format_string_recursive(log, args) {
         if (args && !("substitutionComplete" in args)) {
             args.substitutionComplete = true;
-            const formatters = {};
+            const formatters = {
+                'number': this.formatNumbers
+            };
             for (const iconType of Object.keys(formatters)) {
                 const icons = Object.keys(args).filter(name => name.startsWith(`${iconType}Icon`));
 

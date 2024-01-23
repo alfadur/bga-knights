@@ -288,12 +288,42 @@ class SevenKnightsBewitched extends Table
                     OR other_seen.tile_id IS NOT NULL)
             EOF);
 
-        if (self::DbAffectedRow() === 0) {
+        if (self::DbAffectedRow() <> 1) {
             throw new BgaUserException('Invalid player/tile');
         }
 
         self::incGamestateValue(Globals::ACTIONS_TAKEN, 1);
         self::setGameStateValue(Globals::ASKER, $activePlayerId);
+
+        $numbersCount = 0;
+        for ($i = 0; $i < 7; ++$i) {
+            if ($valuesMask & (1 << $i)) {
+                ++$numbersCount;
+            }
+        }
+
+        $tileOwner = self::getUniqueValueFromDb(
+            "SELECT player_id FROM tile WHERE tile_id = $tileId");
+
+        $args = [
+            'player_name1' => self::getActivePlayerName(),
+            'player_name2' => self::getPlayerNameById($playerId),
+            'numberIcon' => $valuesMask,
+            'preserve' => ['numberIcon']
+        ];
+
+        if ($tileOwner!== null && (int)$tileOwner === $playerId) {
+            $message = $numbersCount === 1 ?
+                clienttranslate('${player_name1} asks ${player_name2}, "is your tile ${numberIcon}?"') :
+                clienttranslate('${player_name1} asks ${player_name2}, "is your tile one of ${numberIcon}?"');
+        } else {
+            $message = $numbersCount === 1 ?
+                clienttranslate('${player_name1} asks ${player_name2}, "is ${player_name3}\'s tile ${numberIcon}?"') :
+                clienttranslate('${player_name1} asks ${player_name2}, "is ${player_name3}\'s tile one of ${numberIcon}?"');
+            $args['player_name3'] = $tileOwner ?? 'Knight-Errant';
+        }
+
+        self::notifyAllPlayers('question', $message, $args);
 
         $this->gamestate->nextState('');
     }
@@ -314,6 +344,15 @@ class SevenKnightsBewitched extends Table
             SET answer = $answer
             WHERE answer IS NULL
             EOF);
+
+        $message = $answer ?
+            '${player_name} answers "Yes"' :
+            '${player_name} answers "No"';
+
+        self::notifyAllPlayers('answer', $message, [
+            'player_name' => self::getActivePlayerName(),
+            'answer' => $answer
+        ]);
         $this->gamestate->nextState('');
     }
 

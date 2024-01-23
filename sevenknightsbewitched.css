@@ -270,7 +270,7 @@
         border-color 100ms ease-in;
 }
 
-.mur-single-number.mur-selected {
+.mur-single-number.mur-selected, .mur-single-number.mur-icon {
     border-color: #1265a2;
     box-shadow: 0 2px 4px black;
     background-color: cornflowerblue;
@@ -297,4 +297,23 @@
 #mur-question-dialog-buttons {
     display: flex;
     flex-flow: row-reverse nowrap;
+}
+
+.mur-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.mur-single-number.mur-icon {
+    width: 22px;
+    height: 22px;
+    font-size: 20px;
+    border-radius: 6px;
+}
+
+.mur-single-number.mur-icon::after {
+    font-size: 20px;
+    color: #e4faff;
 }
