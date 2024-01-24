@@ -204,8 +204,7 @@ define([
                     }
                     break;
                 }
-                case "question":
-                case "vote": {
+                case "question": {
                     for (const player of document.querySelectorAll(".mur-player")) {
                         if (player.dataset.player !== "none") {
                             player.classList.add("mur-selectable");
@@ -278,6 +277,11 @@ define([
                     break;
                 }
                 case "vote": {
+                    for (const player of document.querySelectorAll(".mur-player")) {
+                        if (player.dataset.player !== "none") {
+                            player.classList.add("mur-selectable");
+                        }
+                    }
                     this.addActionButton("mur-vote", _("Vote"), () => {
                         this.request("vote", {
                             playerId: this.selectedPlayer.dataset.player
@@ -294,6 +298,7 @@ define([
                     this.addActionButton("mur-cancel", _("Cancel"), () => {
                         this.request("cancel", {});
                     }, null, null, "gray");
+                    clearTag("mur-selectable");
                     break;
                 }
             }
@@ -428,7 +433,42 @@ define([
             }
         }
         return values
-            .map(n => `<div class="mur-single-number mur-icon mur-selected" data-number="${n}"></div>`)
+            .map(n => `<div class="mur-single-number mur-icon" data-number="${n}"></div>`)
+            .join("");
+    },
+
+    formatTokens(tokens) {
+        console.log("formatTokens", tokens);
+        function createToken(player) {
+            const token = parseInt(player.token);
+            const style = `--token-x: ${token % 4}; --token-y: ${Math.floor(token / 4)}`;
+            return `<div class="mur-icon mur-token" style="${style}"></div>`;
+        }
+
+        const players =
+            Object.keys(this.gamedatas.players).map(id => this.gamedatas.players[id]);
+        const player = players.filter(player => player.name === tokens)[0];
+        if (player) {
+            return createToken(player);
+        }
+
+        if (tokens.startsWith("@tile:")) {
+            console.log("tileID", tokens.substring("@tile:".length));
+            const tile = this.gamedatas.tiles.filter(tile => tile.id === tokens.substring("@tile:".length))[0];
+            console.log(tile);
+            const owner = tile && this.gamedatas.players[tile.player_id];
+            return owner ? createToken(owner) : "";
+        }
+
+        const bits = parseInt(tokens);
+        return Object.keys(players)
+            .map(id => players[id])
+            .filter(player => bits & (1 << parseInt(player.token)))
+            .map(player => {
+                const token = parseInt(player.token);
+                const style = `--token-x: ${token % 4}; --token-y: ${Math.floor(token / 4)}`;
+                return `<div class="mur-icon mur-token" style="${style}"></div>`
+            })
             .join("");
     },
 
@@ -436,7 +476,8 @@ define([
         if (args && !("substitutionComplete" in args)) {
             args.substitutionComplete = true;
             const formatters = {
-                'number': this.formatNumbers
+                'number': this.formatNumbers,
+                'token': this.formatTokens
             };
             for (const iconType of Object.keys(formatters)) {
                 const icons = Object.keys(args).filter(name => name.startsWith(`${iconType}Icon`));

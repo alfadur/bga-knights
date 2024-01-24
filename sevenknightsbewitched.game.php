@@ -227,17 +227,20 @@ class SevenKnightsBewitched extends Table
         }
 
         $playerName = self::getPlayerNameById($activePlayerId);
-        ['character' => $character, 'player_name' => $targetName] =
+        ['tile_id' => $tileId, 'character' => $character, 'player_name' => $targetName] =
             self::getNonEmptyObjectFromDb(<<<EOF
-                SELECT `character`, `player_name` 
+                SELECT tile_id, `character`, `player_name` 
                 FROM tile NATURAL LEFT JOIN player
                 WHERE tile_id = $tileId
                 EOF);
         $targetName ??= 'Knight-Errant';
 
-        self::notifyAllPlayers('message', clienttranslate('${player_name1} inspects ${player_name2}\'s tile'), [
+        self::notifyAllPlayers('message', clienttranslate('${tokenIcon1}${player_name1} inspects ${tokenIcon2}${player_name2}\'s tile'), [
             'player_name1' => $playerName,
-            'player_name2' => $targetName
+            'player_name2' => $targetName,
+            'tokenIcon1' => $playerName,
+            'tokenIcon2' => "@tile:$tileId",
+            'preserve' => ['tokenIcon1', 'tokenIcon2']
         ]);
 
         $message = $character === "0" ?
@@ -305,22 +308,44 @@ class SevenKnightsBewitched extends Table
         $tileOwner = self::getUniqueValueFromDb(
             "SELECT player_id FROM tile WHERE tile_id = $tileId");
 
+        $playerName = self::getActivePlayerName();
+        $targetName = self::getPlayerNameById($playerId);
         $args = [
-            'player_name1' => self::getActivePlayerName(),
-            'player_name2' => self::getPlayerNameById($playerId),
-            'numberIcon' => $valuesMask,
-            'preserve' => ['numberIcon']
+            'player_name1' => $playerName,
+            'player_name2' => $targetName,
+            'tokenIcon1' => $playerName,
+            'tokenIcon2' => $targetName,
+            'preserve' => ['tokenIcon1', 'tokenIcon2']
         ];
+
+        if ($numbersCount > 1) {
+            $args['numberIcons'] = $valuesMask;
+            $args['preserve'][] = 'numberIcons';
+        } else {
+            $args['numberIcon'] = $valuesMask;
+            $args['preserve'][] = 'numberIcon';
+        }
 
         if ($tileOwner!== null && (int)$tileOwner === $playerId) {
             $message = $numbersCount === 1 ?
-                clienttranslate('${player_name1} asks ${player_name2}, "is your tile ${numberIcon}?"') :
-                clienttranslate('${player_name1} asks ${player_name2}, "is your tile one of ${numberIcon}?"');
+                clienttranslate('${tokenIcon1}${player_name1} asks ${tokenIcon2}${player_name2}, "is your tile ${numberIcon}?"') :
+                clienttranslate('${tokenIcon1}${player_name1} asks ${tokenIcon2}${player_name2}, "is your tile one of ${numberIcons}?"');
         } else {
             $message = $numbersCount === 1 ?
-                clienttranslate('${player_name1} asks ${player_name2}, "is ${player_name3}\'s tile ${numberIcon}?"') :
-                clienttranslate('${player_name1} asks ${player_name2}, "is ${player_name3}\'s tile one of ${numberIcon}?"');
-            $args['player_name3'] = $tileOwner ?? 'Knight-Errant';
+                clienttranslate('${tokenIcon1}${player_name1} asks ${tokenIcon2}${player_name2}, "is ${tokenIcon3}${player_name3}\'s tile ${numberIcon}?"') :
+                clienttranslate('${tokenIcon1}${player_name1} asks ${tokenIcon2}${player_name2}, "is ${tokenIcon3}${player_name3}\'s tile one of ${numberIcons}?"');
+
+            if ($tileOwner === null) {
+                $tileToken = "@tile:$tileId";
+                $ownerName = 'Knight-Errant';
+            } else {
+                $tileToken = $tileOwner;
+                $ownerName =  self::getPlayerNameById($tileOwner);
+            }
+
+            $args['player_name3'] = $ownerName;
+            $args['tokenIcon3'] = $tileToken;
+            $args['preserve'][] = 'tokenIcon3';
         }
 
         self::notifyAllPlayers('question', $message, $args);
@@ -346,12 +371,15 @@ class SevenKnightsBewitched extends Table
             EOF);
 
         $message = $answer ?
-            '${player_name} answers "Yes"' :
-            '${player_name} answers "No"';
+            '${tokenIcon}${player_name} answers "Yes"' :
+            '${tokenIcon}${player_name} answers "No"';
 
+        $playerName = self::getActivePlayerName();
         self::notifyAllPlayers('answer', $message, [
-            'player_name' => self::getActivePlayerName(),
-            'answer' => $answer
+            'player_name' => $playerName,
+            'answer' => $answer,
+            'tokenIcon' => $playerName,
+            'preserve' => ['tokenIcon']
         ]);
         $this->gamestate->nextState('');
     }
@@ -438,32 +466,48 @@ class SevenKnightsBewitched extends Table
     {
         $lastCaptain = (int)self::getGameStateValue(Globals::CAPTAIN);
         $playerCount = self::getPlayersNumber();
-        $captain = self::getUniqueValueFromDb(<<<EOF
-            SELECT self.player_id FROM (SELECT * FROM player_status NATURAL JOIN player) AS self
+
+        $votes = self::getObjectListFromDb(<<<EOF
+            SELECT 
+                self.player_id, 
+                SUM(1 << voter.token) AS voters 
+            FROM (SELECT * FROM player_status NATURAL JOIN player) AS self
                 INNER JOIN (SELECT * FROM player_status NATURAL JOIN player) AS voter
                     ON voter.voted = self.player_id
             GROUP BY self.player_id
             ORDER BY COUNT(*) DESC,
                 COUNT(CASE WHEN voter.player_id = self.player_id THEN 1 END) ASC,
-                (self.player_no 
+                (self.player_no + $playerCount 
                      - (SELECT player_no FROM player 
-                        WHERE player_id = $lastCaptain)
-                     + $playerCount) % $playerCount DESC
-            LIMIT 1
+                        WHERE player_id = $lastCaptain)) 
+                    % $playerCount DESC
             EOF);
 
+        foreach (array_reverse($votes) as ['player_id' => $player_id, 'voters' => $voters]) {
+            self::notifyAllPlayers('vote', clienttranslate('${player_name} is recommended by ${tokenIcons}'), [
+                'player_name' => self::getPlayerNameById($player_id),
+                'tokenIcons' => $voters,
+                'preserve' => ['tokenIcons']
+            ]);
+        }
+
+        $captain = $votes[0]['player_id'];
         self::setGameStateValue(Globals::CAPTAIN, $captain);
         $playerName = self::getPlayerNameById($captain);
 
-        self::notifyAllPlayers('message', clienttranslate('${player_name} is appointed as the captain'), [
-            'player_name' => $playerName
+        self::notifyAllPlayers('message', clienttranslate('${tokenIcon}${player_name} is appointed as the captain'), [
+            'player_name' => $playerName,
+            'tokenIcon' => $playerName,
+            'preserve' => ['tokenIcon']
         ]);
 
         $this->gamestate->changeActivePlayer($captain);
 
         if (self::isWitchTeam($captain)) {
-            self::notifyAllPlayers('message', clienttranslate('${player_name} belongs to the Witch Team'), [
-                'player_name' => $playerName
+            self::notifyAllPlayers('message', clienttranslate('${tokenIcon}${player_name} belongs to the Witch Team'), [
+                'player_name' => $playerName,
+                'tokenIcon' => $playerName,
+                'preserve' => ['tokenIcon']
             ]);
             $this->gamestate->nextState('end');
         } else {
@@ -501,7 +545,6 @@ class SevenKnightsBewitched extends Table
         $playersCount = $this->getPlayersNumber();
         $actionsTaken = self::getGameStateValue(Globals::ACTIONS_TAKEN);
         if ($actionsTaken > ($inspectsPerPlayer + 1) * $playersCount) {
-            self::setGameStateValue(Globals::DEPLOYMENT, 0);
             $this->gamestate->nextState('deploy');
         } else if ($actionsTaken >= ($inspectsPerPlayer + 1) * $playersCount) {
             $this->gamestate->nextState('vote');
@@ -516,7 +559,6 @@ class SevenKnightsBewitched extends Table
 
     function stFinalCheck(): void
     {
-        $deployment = (int)self::getGameStateValue(Globals::DEPLOYMENT);
         $count = $deployment & 0b1111;
 
         $order = self::getObjectListFromDb(<<<EOF
@@ -582,10 +624,7 @@ class SevenKnightsBewitched extends Table
 
     function argDeployKnights(): array
     {
-        $deployment = (int)self::getGameStateValue(Globals::DEPLOYMENT);
-        return [
-            'deployment' => $deployment
-        ];
+        return [];
     }
 
     function zombieTurn($state, $activePlayer)
@@ -602,6 +641,11 @@ class SevenKnightsBewitched extends Table
     function upgradeTableDb($fromVersion)
     {
 
+    }
+
+    function __skipToVote()
+    {
+        $this->gamestate->jumpToState(State::VOTE);
     }
 
     function __skipRound()

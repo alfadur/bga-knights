@@ -130,7 +130,8 @@
 }
 
 .mur-tile.mur-owned .mur-tile-front::after,
-.mur-tile.mur-owned .mur-tile-back::after {
+.mur-tile.mur-owned .mur-tile-back::after,
+.mur-token {
     width: var(--token-size);
     height: var(--token-size);
     top: 4px;
@@ -264,10 +265,13 @@
     height: 40px;
     border-radius: 12px;
     border: 2px solid #b9919159;
-    margin: 12px 4px 8px;
     transition:
         background-color 200ms ease-in,
         border-color 100ms ease-in;
+}
+
+.mur-number-list .mur-single-number {
+    margin: 12px 4px 8px;
 }
 
 .mur-single-number.mur-selected, .mur-single-number.mur-icon {
@@ -286,7 +290,7 @@
     transition: color 100ms ease-in;
 }
 
-.mur-single-number.mur-selected::after {
+.mur-single-number.mur-selected::after, .mur-single-number.mur-icon::after {
     color: #e4faff;
 }
 
@@ -301,8 +305,8 @@
 
 .mur-icon {
     display: inline-flex;
-    align-items: center;
-    justify-content: center;
+    vertical-align: middle;
+    margin: 4px;
     pointer-events: none;
 }
 
@@ -315,5 +319,8 @@
 
 .mur-single-number.mur-icon::after {
     font-size: 20px;
-    color: #e4faff;
+}
+
+.mur-token {
+    --token-size: 18px;
 }
