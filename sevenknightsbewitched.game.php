@@ -390,13 +390,26 @@ class SevenKnightsBewitched extends Table
         $currentPlayerId = (int)self::getCurrentPlayerId();
 
         self::DbQuery(<<<EOF
-            UPDATE player_status 
-            SET voted = $playerId
-            WHERE player_id = $currentPlayerId
+            UPDATE player_status AS self 
+                INNER JOIN tile USING (player_id)
+                INNER JOIN player_status AS target 
+                    ON (target.player_id = $playerId)
+                INNER JOIN tile AS target_tile
+                    ON (target_tile.player_id = target.player_id)
+                LEFT JOIN inspection 
+                    ON (inspection.player_id = self.player_id
+                        AND inspection.tile_id = target_tile.tile_id)
+                LEFT JOIN inspection AS target_inspection 
+                    ON (target_inspection.player_id = target.player_id
+                        AND target_inspection.tile_id = tile.tile_id)
+            SET self.voted = $playerId
+            WHERE self.player_id = $currentPlayerId
+                AND (tile.character <> 0 OR target_inspection.tile_id IS NULL)
+                AND (target_tile.character <> 0 OR inspection.tile_id IS NULL)
             EOF);
 
         if (self::DbAffectedRow() === 0) {
-            throw new BgaUserException('Invalid player');
+            throw new BgaUserException('Invalid vote');
         }
 
         $this->gamestate->setPlayerNonMultiactive($currentPlayerId, '');
