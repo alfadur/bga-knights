@@ -226,6 +226,15 @@
     width: var(--tile-width);
     height: var(--tile-height);
     outline: dotted #7e6b27 4px;
+    transition: box-shadow 200ms ease-in;
+}
+
+.mur-placeholder.mur-inactive {
+    pointer-events: none;
+}
+
+.mur-placeholder.mur-selectable:hover {
+    box-shadow: 0 0 12px cornflowerblue;
 }
 
 .mur-placeholder::after, .mur-single-number::after {
@@ -239,6 +248,12 @@
     font-size: calc(var(--tile-height) / 3);
     color: #5e4018;
     opacity: 0.35;
+    pointer-events: none;
+    transition: color 100ms ease-in;
+}
+
+.mur-placeholder.mur-selectable:hover::after {
+    color: cornflowerblue;
 }
 
 .mur-placeholder .mur-tile {
@@ -323,4 +338,20 @@
 
 .mur-token {
     --token-size: 18px;
+}
+
+.mur-witch {
+    --icon-size: 32px;
+    width: var(--icon-size);
+    height: var(--icon-size);
+    border-radius: var(--icon-size);
+    background-image: url("img/knights.jpg");
+    background-size:
+        calc(var(--icon-size) * 15.1)
+        calc(var(--icon-size) * 4.34);
+    background-position:
+        calc(var(--icon-size) * -0.32)
+        calc(var(--icon-size) * -1.13);
+    border: 1px solid #d2403180;
+    box-shadow: 0 2px 3px black;
 }

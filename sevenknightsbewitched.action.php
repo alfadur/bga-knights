@@ -77,6 +77,12 @@ class action_sevenknightsbewitched extends APP_GameAction
         self::ajaxResponse();
     }
 
+    public function check() {
+        self::setAjaxMode();
+        $this->game->check();
+        self::ajaxResponse();
+    }
+
     public function cancel()
     {
         self::setAjaxMode();

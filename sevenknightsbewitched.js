@@ -29,56 +29,43 @@ function createPlayer(index, angle, player) {
     const style = `--index: ${index}; --cx: ${coords[0]}; --cy: ${coords[1]}`;
 
     const id = player ? player.id : "none";
+    const token = player ? player.token : "none";
     const name = player ?
         `<div class="mur-player-name" style="color: #${player.color}">${player.name}</div>` :
         "";
 
-    return `<div id="mur-player-${id}" class="mur-player" style="${style}" data-player="${id}">
+    return `<div id="mur-player-${id}" class="mur-player" style="${style}" data-player="${id}" data-token="${token}">
         ${name}
     </div>`;
 }
 
-function createTile(id) {
-    return `<div id="mur-tile-${id}" class="mur-tile" data-id="${id}" style="--index: ${id - 1}">
-            <div class="mur-tile-back"></div>                
-            <div class="mur-tile-front"></div>
-            <div class="mur-tile-side"></div>
-        </div>`;
-}
-
-function createDealtTiles(tiles, token) {
+function createTile(tile, token) {
     const settings = [];
     if (token !== null) {
         token = parseInt(token);
         settings.push(`--token-x: ${token % 4}; --token-y: ${Math.floor(token / 4)}`);
     }
 
-    const tileElements = tiles.map(tile => {
-        const character = tile.character !== null ?
-            [`--character: ${tile.character}`] : [];
-        const style = [character, ...settings].join("; ");
+    const character = tile.character !== null ?
+        [`--character: ${tile.character}`] : [];
+    const style = [character, ...settings].join("; ");
 
-        const classes = [];
-        if (token !== null) {
-            classes.push("mur-owned");
-        }
-        if (tile.character !== null) {
-            classes.push("mur-flipped");
-        }
+    const classes = [];
+    if (token !== null) {
+        classes.push("mur-owned");
+    }
+    if (tile.character !== null) {
+        classes.push("mur-flipped");
+    }
 
-        return `<div id="mur-tile-${tile.id}" 
-                    class="mur-tile ${classes.join(" ")}" 
-                    style="${style}"
-                    data-id="${tile.id}">
-            <div class="mur-tile-back"></div>                
-            <div class="mur-tile-front"></div>
-            <div class="mur-tile-side"></div>
-        </div>`
-    });
-
-    return `<div class="mur-tile-container">
-        ${tileElements.join("")}
-    </div>`;
+    return `<div id="mur-tile-${tile.id}" 
+                class="mur-tile ${classes.join(" ")}" 
+                style="${style}"
+                data-id="${tile.id}">
+        <div class="mur-tile-back"></div>                
+        <div class="mur-tile-front"></div>
+        <div class="mur-tile-side"></div>
+    </div>`
 }
 
 function createLeftoverTile(index) {
@@ -115,6 +102,7 @@ define([
         console.log(`${gameName} constructor`);
         this.selectedTile = null;
         this.selectedPlayer = null;
+        this.tokenTiles = Array(8).fill(null);
     },
 
     setup(data) {
@@ -137,7 +125,7 @@ define([
 
         const areaCount = extraPlayer ? playerCount + 1 : playerCount;
 
-        function createPlayerArea(player, tiles, index) {
+        function createPlayerArea(player, index) {
             const angle = 90 + index * 360 / areaCount;
             const playerArea = createElement(playArea,
                 createPlayer(index, angle, player));
@@ -150,32 +138,56 @@ define([
                 });
             }
 
-            const tileContainer = createElement(playerArea,
-                createDealtTiles(tiles, player && player.token));
-
-            for (const tile of tileContainer.querySelectorAll(".mur-tile")) {
-                console.log("New tile", tile);
-                tile.addEventListener("click", event => {
-                    event.stopPropagation();
-                    console.log("Tile click");
-                    this.onTileClick(tile, player && player.id);
-                });
-            }
+            createElement(playerArea, `<div class="mur-tile-container"></div>`);
         }
 
         for (const playerId of playerIds) {
             const player = players[playerId];
             const index = sortKey(player);
-            const tiles = data.tiles.filter(tile => tile.player_id === playerId);
 
-            createPlayerArea.call(this, player, tiles, index);
+            createPlayerArea.call(this, player, index);
         }
 
         if (extraPlayer) {
-            const freeTiles = data.tiles.filter(tile => tile.player_id === null);
-            for (const tile of freeTiles) {
-                createPlayerArea.call(this, null, freeTiles, areaCount - 1);
+            createPlayerArea.call(this, null, areaCount - 1);
+        }
+
+        for (const tile of data.tiles) {
+            if (tile.player_id !== null) {
+                const token = data.players[tile.player_id].token;
+                this.tokenTiles[token] = tile;
             }
+        }
+
+        for (const descriptor of data.tiles) {
+            let tile;
+            let token;
+
+            if (descriptor.player_id === null) {
+                token = this.tokenTiles.indexOf(null);
+                this.tokenTiles[token] = descriptor;
+            } else {
+                token = data.players[descriptor.player_id].token;
+            }
+
+            if (descriptor.deployment !== null) {
+                const place = document.getElementById(`mur-placeholder-${descriptor.deployment}`);
+
+                tile  = createElement(place, createTile(descriptor, token));
+            } else {
+                const playerId = descriptor.player_id || "none";
+                console.log(playerId);
+                const container = document.querySelector(`#mur-player-${playerId} .mur-tile-container`);
+
+                tile = createElement(container, createTile(descriptor, token))
+            }
+
+            console.log("New tile", tile);
+            tile.addEventListener("click", event => {
+                event.stopPropagation();
+                console.log("Tile click", tile);
+                this.onTileClick(tile);
+            });
         }
 
         const maxTile = data.hasWitch ?
@@ -183,7 +195,14 @@ define([
             data.tiles.length - 1;
 
         Array.from(document.querySelectorAll(" .mur-placeholder")).forEach((place, index) => {
-            if (index > maxTile) {
+            if (index <= maxTile) {
+                place.addEventListener("click", event => {
+                    event.stopPropagation();
+                    console.log("Place click");
+                    this.onPlaceholderClick(place);
+                });
+            } else {
+                place.classList.add("mur-inactive");
                 createElement(place, createLeftoverTile(index + 1), undefined);
             }
         });
@@ -218,6 +237,18 @@ define([
                     }
                     break;
                 }
+                case "deployKnights": {
+                    for (const tile of document.querySelectorAll(".mur-tile:not(.mur-leftover)")) {
+                        tile.classList.add("mur-selectable");
+                    }
+                    break;
+                }
+                case "clientDeploy": {
+                    for (const space of document.querySelectorAll(".mur-placeholder")) {
+                        space.classList.add("mur-selectable");
+                    }
+                    break;
+                }
             }
         }
     },
@@ -229,13 +260,15 @@ define([
             switch (stateName) {
                 case "inspect":
                 case "clientSelectTiles":
-                case "vote": {
+                case "vote":
+                case "clientDeploy": {
                     clearTag("mur-selectable");
                     this.selectTile(null);
                     this.selectPlayer(null);
                     break;
                 }
-                case "question": {
+                case "question":
+                case "deployKnights": {
                     clearTag("mur-selectable");
                 }
             }
@@ -257,10 +290,12 @@ define([
                     break;
                 }
                 case "clientSelectTiles":
+                case "clientDeploy": {
                     this.addActionButton("mur-cancel", _("Cancel"), () => {
                         this.restoreServerGameState();
                     }, null, null, "gray");
                     break;
+                }
                 case "answer": {
                     const that = this;
                     const answer = parseInt(args._private.answer);
@@ -290,6 +325,13 @@ define([
                         });
                     });
                     document.getElementById("mur-vote").classList.add("disabled");
+                    break;
+                }
+                case "deployKnights": {
+                    this.addActionButton("mur-check", _("Fall in!"), () => {
+                        this.request("check");
+                    }, null, null, "orange")
+                    break;
                 }
             }
         } else if (!this.isSpectator) {
@@ -397,6 +439,21 @@ define([
                 "disabled", !this.selectTile(tile));
         } else if (this.checkAction("clientAsk", true)) {
             this.questionDialog(this.selectedPlayer, tile);
+        } else if (this.checkAction("deploy", true)) {
+            this.selectTile(tile);
+            this.setClientState("clientDeploy", {
+                descriptionmyturn: _("You must select a space for the tile"),
+                possibleactions: ["clientDeploy"]
+            });
+        }
+    },
+
+    onPlaceholderClick(place) {
+        if (this.checkAction("clientDeploy", true)) {
+            this.request("deploy", {
+                tileId: this.selectedTile.dataset.id,
+                position: place.dataset.number
+            });
         }
     },
 
@@ -419,6 +476,12 @@ define([
 
         dojo.subscribe("question", this, data => {
             console.log(data);
+        });
+
+        dojo.subscribe("move", this, data => {
+            const tile = document.getElementById(`mur-tile-${data.args.tileId}`);
+            const place = document.getElementById(`mur-placeholder-${data.args.position}`);
+            place.appendChild(tile);
         })
 
         this.notifqueue.setSynchronous("inspect", 500);
@@ -426,50 +489,54 @@ define([
 
     formatNumbers(bitmask) {
         bitmask = parseInt(bitmask);
-        const values = [];
-        for (i = 0; i < 7; ++i) {
-            if (bitmask & (1 << i)) {
-                values.push(i + 1);
+        if (bitmask === 0) {
+            return `<div class="mur-icon mur-witch"></div>`;
+        } else {
+            const values = [];
+            for (i = 0; i < 7; ++i) {
+                if (bitmask & (1 << i)) {
+                    values.push(i + 1);
+                }
             }
+            return values
+                .map(n => `<div class="mur-single-number mur-icon" data-number="${n}"></div>`)
+                .join("");
         }
-        return values
-            .map(n => `<div class="mur-single-number mur-icon" data-number="${n}"></div>`)
-            .join("");
     },
 
     formatTokens(tokens) {
-        console.log("formatTokens", tokens);
-        function createToken(player) {
-            const token = parseInt(player.token);
+        function createToken(token) {
+            token = parseInt(token);
             const style = `--token-x: ${token % 4}; --token-y: ${Math.floor(token / 4)}`;
             return `<div class="mur-icon mur-token" style="${style}"></div>`;
         }
 
-        const players =
-            Object.keys(this.gamedatas.players).map(id => this.gamedatas.players[id]);
-        const player = players.filter(player => player.name === tokens)[0];
-        if (player) {
-            return createToken(player);
+        const [type, content] = tokens.split("@", 2);
+        console.log("formatTokens", type, content);
+        switch (type) {
+            case "player": {
+                const players =
+                    Object.keys(this.gamedatas.players).map(id => this.gamedatas.players[id]);
+                const player = players.filter(player => player.name === content)[0];
+                return player ? createToken(player.token) : "";
+            }
+            case "tile": {
+                const tile = this.gamedatas.tiles.filter(tile => tile.id === content)[0];
+                console.log(tile);
+                const token = this.tokenTiles.indexOf(tile);
+                return token >= 0 ? createToken(token) : "";
+            }
+            case "bitset": {
+                const bits = parseInt(content);
+                const players = this.gamedatas.players;
+                return Object.keys(players)
+                    .map(id => players[id])
+                    .filter(player => bits & (1 << parseInt(player.token)))
+                    .map(player => createToken(player.token))
+                    .join("");
+            }
         }
-
-        if (tokens.startsWith("@tile:")) {
-            console.log("tileID", tokens.substring("@tile:".length));
-            const tile = this.gamedatas.tiles.filter(tile => tile.id === tokens.substring("@tile:".length))[0];
-            console.log(tile);
-            const owner = tile && this.gamedatas.players[tile.player_id];
-            return owner ? createToken(owner) : "";
-        }
-
-        const bits = parseInt(tokens);
-        return Object.keys(players)
-            .map(id => players[id])
-            .filter(player => bits & (1 << parseInt(player.token)))
-            .map(player => {
-                const token = parseInt(player.token);
-                const style = `--token-x: ${token % 4}; --token-y: ${Math.floor(token / 4)}`;
-                return `<div class="mur-icon mur-token" style="${style}"></div>`
-            })
-            .join("");
+        return "";
     },
 
     format_string_recursive(log, args) {

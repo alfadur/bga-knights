@@ -59,6 +59,8 @@ interface Globals {
     const ANSWER_ID = 13;
     const ROUND = 'round';
     const ROUND_ID = 14;
+    const FIRST_PLAYER = 'first_player';
+    const FIRST_PLAYER_ID = 15;
 }
 
 const MAX_ROUNDS = 100;
