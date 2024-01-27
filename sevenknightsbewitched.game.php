@@ -27,7 +27,8 @@ class SevenKnightsBewitched extends Table
             Globals::ROUND => Globals::ROUND_ID,
             Globals::FIRST_PLAYER => Globals::FIRST_PLAYER_ID,
 
-            GameOption::MODE => GameOption::MODE_ID
+            GameOption::MODE => GameOption::MODE_ID,
+            GameOption::COOP => GameOption::COOP_ID
         ]);
     }
 
@@ -93,7 +94,7 @@ class SevenKnightsBewitched extends Table
 
         $tilesPerPlayer = 1;
         $additionalCharacters =
-            $mode === GameMode::DISORDER ? 3 :
+            $mode === GameMode::DARKNESS ? 3 :
                 (count($players) < 6 ? 1 : 0);
 
         switch ($mode) {
@@ -101,16 +102,12 @@ class SevenKnightsBewitched extends Table
                 $characters = range(0,count($players) + $additionalCharacters - 1);
                 shuffle($characters);
                 break;
-            case GameMode::TUTORIAL:
-                $characters = range(1, count($players) + $additionalCharacters);
-                shuffle($characters);
-                break;
             case GameMode::ADVANCED:
                 $characters = range(0, 7);
                 shuffle($characters);
                 $characters = array_slice($characters, 0, count($players) + $additionalCharacters);
                 break;
-            case GameMode::DISORDER:
+            case GameMode::DARKNESS:
                 $batch = range(1, 7);
                 shuffle($batch);
                 $characters = array_slice($batch, 0, count($players));
@@ -120,6 +117,8 @@ class SevenKnightsBewitched extends Table
 
                 $characters = array_merge($characters, array_slice($batch, 0, $additionalCharacters));
                 break;
+            default:
+                return;
         }
 
         $tileIndex = 1;
@@ -187,13 +186,10 @@ class SevenKnightsBewitched extends Table
 
         $tiles = self::getTiles($currentPlayerId);
 
-        $gameMode = (int)self::getGameStateValue(GameOption::MODE);
-        $hasWitch = $gameMode !== GameMode::TUTORIAL;
-
         return [
             'players' => $players,
             'tiles' => $tiles,
-            'hasWitch' => $hasWitch
+            'hasWitch' => true
         ];
     }
 
@@ -204,7 +200,7 @@ class SevenKnightsBewitched extends Table
 
         $mode = (int)self::getGameStateValue(GameOption::MODE);
 
-        if ($mode === GameMode::DISORDER) {
+        if ($mode === GameMode::DARKNESS) {
             $actionsTaken = (int)self::getGameStateValue(Globals::ACTIONS_TAKEN);
 
             if ($actionsTaken < self::getPlayersNumber()) {
@@ -585,7 +581,7 @@ class SevenKnightsBewitched extends Table
         }
 
         $mode = (int)self::getGameStateValue(GameOption::MODE);
-        $inspectsPerPlayer = $mode === GameMode::DISORDER ? 2 : 1;
+        $inspectsPerPlayer = $mode === GameMode::DARKNESS ? 2 : 1;
 
         $playersCount = $this->getPlayersNumber();
         $actionsTaken = self::getGameStateValue(Globals::ACTIONS_TAKEN);

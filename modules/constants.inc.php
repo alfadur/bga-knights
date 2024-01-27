@@ -3,13 +3,14 @@
 interface GameOption {
     const MODE = 'mode';
     const MODE_ID = 100;
+    const COOP = 'coop';
+    const COOP_ID = 101;
 }
 
 interface GameMode {
     const STANDARD = 1;
-    const TUTORIAL = 2;
-    const DISORDER = 3;
-    const ADVANCED = 4;
+    const ADVANCED = 2;
+    const DARKNESS = 3;
 }
 
 interface Fsm {

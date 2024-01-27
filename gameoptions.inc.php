@@ -14,57 +14,74 @@ require_once('modules/constants.inc.php');
 
 $game_options = [
     GameOption::MODE_ID => [
-        'name'=> totranslate('Game Mode'),
+        'name'=> totranslate('Game Ruleset'),
+        'level' => 'major',
         'default' => GameMode::STANDARD,
         'values' => [
             GameMode::STANDARD => [
-                'name' => totranslate('Basic Rules'),
-                'tmdisplay' => totranslate('')
-            ],
-            GameMode::DISORDER => [
-                'name' => totranslate('Groping in the dark'),
-                'description' => totranslate('Each player has two tiles instead of one')
+                'name' => totranslate('Standard Rules'),
+                'description' => totranslate('Tiles are always sequential. The Witch is always present in competitive mode'),
+                'tmdisplay' => totranslate('Standard')
             ],
             GameMode::ADVANCED => [
-                'name' => totranslate('Advanced rules'),
+                'name' => totranslate('Advanced Rules'),
+                'description' => totranslate("A random subset of tiles used each round. The Witch may or may not be present in competitive mode"),
+                'tmdisplay' => totranslate('Advanced'),
                 'nobeginner' => true
-            ]
+            ],
+            GameMode::DARKNESS => [
+                'name' => totranslate('Groping in the dark'),
+                'description' => totranslate('Game mode for 3 and 4 players. Two inspections per round for each player using leftover tiles'),
+                'tmdisplay' => totranslate('Darkness')
+            ],
         ],
-        'displaycondition' => [
+        'startcondition' => [
             GameMode::STANDARD => [
                 [
                     'type' => 'minplayers',
-                    'value' => 4
-                ]
-            ],
-            GameMode::TUTORIAL => [
-                [
-                    'type' => 'minplayers',
-                    'value' => 4
-                ],
-                [
-                    'type' => 'maxplayers',
-                    'value' => 7
-                ]
-            ],
-            GameMode::DISORDER=> [
-                [
-                    'type' => 'maxplayers',
-                    'value' => 4
+                    'value' => 4,
+                    'message' => totranslate('This mode requires at least 4 players')
                 ]
             ],
             GameMode::ADVANCED => [
                 [
                     'type' => 'minplayers',
-                    'value' => 4
+                    'value' => 4,
+                    'message' => totranslate('This mode requires at least 4 players')
                 ],
                 [
                     'type' => 'maxplayers',
-                    'value' => 7
+                    'value' => 7,
+                    'message' => totranslate('This mode cannot be played with 8 players')
                 ]
+            ],
+            GameMode::DARKNESS => [
+                [
+                    'type' => 'minplayers',
+                    'value' => 3,
+                    'message' => totranslate('This mode can only be played with 3 or 4 players')
+                ],
+                [
+                    'type' => 'maxplayers',
+                    'value' => 4,
+                    'message' => totranslate('This mode can only be played with 3 or 4 players')
+                ]
+            ]
+        ]
+    ],
+    GameOption::COOP_ID => [
+        'name' => totranslate('Cooperative Game'),
+        'default' => 0,
+        'values' => [
+            0 => [
+                'name' => totranslate('Disabled'),
+            ],
+            1 => [
+                'name' => totranslate('Enabled'),
+                'tmdisplay' => totranslate('Cooperative'),
+                'description' => totranslate('Cooperative game without the Witch'),
+                'is_coop' => true
             ]
         ]
     ]
 ];
-
-
