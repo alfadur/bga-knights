@@ -10,6 +10,12 @@
 
 const gameName = "sevenknightsbewitched";
 
+const GameMode = Object.freeze({
+    standard: 1,
+    advanced: 2,
+    darkness: 3
+})
+
 function clearTag(tag) {
     for (const element of document.querySelectorAll(`.${tag}`)) {
         element.classList.remove(tag);
@@ -76,13 +82,29 @@ function createLeftoverTile(index) {
     </div>`
 }
 
-function createPlaceholder(index) {
-    return `<div class="mur-placeholder" data-number="${index + 1}"></div>`
+function createPlaceholder(index, unordered, optional, inactive) {
+    const classes = ["mur-placeholder"];
+    if (unordered) {
+        classes.push("mur-unordered");
+    }
+    if (optional) {
+        classes.push("mur-optional");
+    }
+    if (inactive) {
+        classes.push("mur-inactive");
+    }
+    return `<div id="mur-placeholder-${index + 1}" class="${classes.join("")}" data-number="${index + 1}"></div>`
 }
 
-function createQuestionDialog() {
+function createArrow(token) {
+    token = parseInt(token);
+    const style = `--sprite-x: ${token % 4}; --sprite-y: ${Math.floor(token / 4)}`;
+    return `<div class="mur-arrow" style="${style}"></div>`;
+}
+
+function createQuestionDialog(numberCount) {
     const questionText = _("Is the tile number one of...");
-    const numbers = [1, 2, 3, 4, 5, 6, 7].map(n =>
+    const numbers = [1, 2, 3, 4, 5, 6, 7].slice(0, numberCount).map(n =>
         `<div class="mur-single-number" data-number="${n}"></div>`);
     return `<div>
         <div class="mur-question-text">${questionText}</div>
@@ -107,6 +129,42 @@ define([
 
     setup(data) {
         console.log("Starting game setup");
+
+        this.gameMode = parseInt(data.mode);
+        this.isCoop = parseInt(data.coop);
+
+        const deployment = document.getElementById("mur-deployment");
+        const unordered = this.gameMode !== GameMode.standard;
+
+        let i = 0;
+        while (i < data.tiles.length + this.isCoop - 1) {
+            createElement(deployment,
+                createPlaceholder(i++, unordered));
+        }
+
+        if (this.gameMode !== GameMode.standard && !this.isCoop) {
+            createElement(deployment,
+                createPlaceholder(i++, unordered, true))
+        }
+
+        if (this.gameMode === GameMode.standard) {
+            while (i < 7) {
+                createElement(deployment,
+                    createPlaceholder(i++, false, false, true))
+            }
+        }
+
+        for (const place of document.querySelectorAll(" .mur-placeholder")) {
+            if (place.classList.contains("mur-inactive")) {
+                createElement(place, createLeftoverTile(index + 1), undefined);
+            } else {
+                place.addEventListener("click", event => {
+                    event.stopPropagation();
+                    console.log("Place click");
+                    this.onPlaceholderClick(place);
+                });
+            }
+        }
 
         const players = data.players;
         const playerIds = Object.keys(players);
@@ -190,22 +248,10 @@ define([
             });
         }
 
-        const maxTile = data.hasWitch ?
-            data.tiles.length - 2 :
-            data.tiles.length - 1;
-
-        Array.from(document.querySelectorAll(" .mur-placeholder")).forEach((place, index) => {
-            if (index <= maxTile) {
-                place.addEventListener("click", event => {
-                    event.stopPropagation();
-                    console.log("Place click");
-                    this.onPlaceholderClick(place);
-                });
-            } else {
-                place.classList.add("mur-inactive");
-                createElement(place, createLeftoverTile(index + 1), undefined);
-            }
-        });
+        for (const inspection of data.inspections) {
+            const tile = document.getElementById(`mur-tile-${inspection.tile_id}`);
+            createElement(tile, createArrow(data.players[inspection.player_id].token));
+        }
 
         this.setupNotifications();
 
@@ -380,10 +426,13 @@ define([
     },
 
     questionDialog(player, tile) {
+        const numbersCount = this.gameMode === GameMode.standard ?
+            this.gamedatas.tiles.length + this.isCoop - 1 : 7;
+
         const dialog = new ebg.popindialog();
         dialog.create("mur-question-dialog");
         dialog.setTitle(_("Choose a question"));
-        dialog.setContent(createQuestionDialog());
+        dialog.setContent(createQuestionDialog(numbersCount));
         dialog.show();
 
         function ask() {
@@ -470,6 +519,13 @@ define([
         dojo.subscribe("inspect", this, data => {
             console.log(data);
             const tile = document.querySelector(`#mur-tile-${data.args.tileId}`);
+
+            createElement(tile, createArrow(this.gamedatas.players[data.args.playerId].token));
+        });
+
+        dojo.subscribe("reveal", this, data => {
+            console.log(data);
+            const tile = document.querySelector(`#mur-tile-${data.args.tileId}`);
             tile.style.setProperty("--character", data.args.character);
             tile.classList.add("mur-flipped");
         });
@@ -482,9 +538,11 @@ define([
             const tile = document.getElementById(`mur-tile-${data.args.tileId}`);
             const place = document.getElementById(`mur-placeholder-${data.args.position}`);
             place.appendChild(tile);
+            const ready = document.querySelectorAll(".mur-placeholder:not(.mur-optional):not(.mur-inactive) > *").length === 0;
+            document.getElementById("mur-check").classList.toggle("disabled", ready);
         })
 
-        this.notifqueue.setSynchronous("inspect", 500);
+        this.notifqueue.setSynchronous("reveal", 500);
     },
 
     formatNumbers(bitmask) {
@@ -493,7 +551,7 @@ define([
             return `<div class="mur-icon mur-witch"></div>`;
         } else {
             const values = [];
-            for (i = 0; i < 7; ++i) {
+            for (let i = 0; i < 7; ++i) {
                 if (bitmask & (1 << i)) {
                     values.push(i + 1);
                 }

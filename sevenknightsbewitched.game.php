@@ -91,19 +91,22 @@ class SevenKnightsBewitched extends Table
     {
         $players = $this->loadPlayersBasicInfos();
         $mode = (int)self::getGameStateValue(GameOption::MODE);
+        $coop = (int)self::getGameStateValue(GameOption::COOP);
 
         $tilesPerPlayer = 1;
-        $additionalCharacters =
-            $mode === GameMode::DARKNESS ? 3 :
-                (count($players) < 6 ? 1 : 0);
+        if ($mode === GameMode::DARKNESS) {
+            $additionalCharacters = $coop ? 7 - count($players) : 3;
+        } else {
+            $additionalCharacters = count($players) < 6 ? 1 : 0;
+        }
 
         switch ($mode) {
             case GameMode::STANDARD:
-                $characters = range(0,count($players) + $additionalCharacters - 1);
+                $characters = range($coop,count($players) + $additionalCharacters + $coop - 1);
                 shuffle($characters);
                 break;
             case GameMode::ADVANCED:
-                $characters = range(0, 7);
+                $characters = range($coop, 7);
                 shuffle($characters);
                 $characters = array_slice($characters, 0, count($players) + $additionalCharacters);
                 break;
@@ -112,8 +115,10 @@ class SevenKnightsBewitched extends Table
                 shuffle($batch);
                 $characters = array_slice($batch, 0, count($players));
                 $batch = array_slice($batch, count($players));
-                $batch[] = 0;
-                shuffle($batch);
+                if (!$coop) {
+                    $batch[] = 0;
+                    shuffle($batch);
+                }
 
                 $characters = array_merge($characters, array_slice($batch, 0, $additionalCharacters));
                 break;
@@ -129,7 +134,7 @@ class SevenKnightsBewitched extends Table
                 $character = array_shift($characters);
                 $values[] = "($tileIndex, $playerId, $character)";
 
-                self::notifyPlayer($playerId, 'inspect', clienttranslate('You are ${numberIcon}'), [
+                self::notifyPlayer($playerId, 'reveal', clienttranslate('You are ${numberIcon}'), [
                     'tileId' => $tileIndex,
                     'character' => $character,
                     'numberIcon' => $character === 0 ? $character : (1 << ($character - 1)),
@@ -186,10 +191,14 @@ class SevenKnightsBewitched extends Table
 
         $tiles = self::getTiles($currentPlayerId);
 
+        $inspections = self::DbQuery("SELECT * FROM inspection");
+
         return [
             'players' => $players,
             'tiles' => $tiles,
-            'hasWitch' => true
+            'inspections' => $inspections,
+            'mode' => self::getGameStateValue(GameOption::MODE),
+            'coop' => self::getGameStateValue(GameOption::COOP)
         ];
     }
 
@@ -236,23 +245,26 @@ class SevenKnightsBewitched extends Table
         $character = (int)$character;
         $targetName ??= 'Knight-Errant';
 
-        self::notifyAllPlayers('message', clienttranslate('${tokenIcon1}${player_name1} inspects ${tokenIcon2}${player_name2}\'s tile'), [
+        self::notifyAllPlayers('inspect', clienttranslate('${tokenIcon1}${player_name1} inspects ${tokenIcon2}${player_name2}\'s tile'), [
             'player_name1' => $playerName,
             'player_name2' => $targetName,
             'tokenIcon1' => "player@$playerName",
             'tokenIcon2' => "tile@$tileId",
+            'playerId' => self::getActivePlayerId(),
+            'tileId' => $tileId,
             'preserve' => ['tokenIcon1', 'tokenIcon2']
         ]);
 
         $message = $character === 0 ?
-            clienttranslate('${player_name} turns out to be ${numberIcon}. You are now bewitched!') :
-            clienttranslate('${player_name} turns out to be ${numberIcon}');
-        self::notifyPlayer($activePlayerId, 'inspect', $message, [
+            clienttranslate('${tokenIcon}${player_name} turns out to be ${numberIcon}. You are now bewitched!') :
+            clienttranslate('${tokenIcon}${player_name} turns out to be ${numberIcon}');
+        self::notifyPlayer($activePlayerId, 'reveal', $message, [
             'player_name' => $targetName,
+            'tokenIcon' => "tile@$tileId",
             'tileId' => $tileId,
             'character' => $character,
             'numberIcon' => $character === 0 ? $character : (1 << ($character - 1)),
-            'preserve' => ['numberIcon']
+            'preserve' => ['numberIcon', 'tokenIcon']
         ]);
 
         self::incGamestateValue(Globals::ACTIONS_TAKEN, 1);
