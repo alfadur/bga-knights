@@ -465,8 +465,8 @@ class SevenKnightsBewitched extends Table
             'SELECT COUNT(deployment) FROM tile');
 
         $playerName = self::getActivePlayerName();
-        self::notifyAllPlayers("move", clienttranslate('${tokenIcon1}${playerName} places tile ${tokenIcon2} on position ${position}'), [
-            'playerName' => self::getActivePlayerName(),
+        self::notifyAllPlayers("move", clienttranslate('${tokenIcon1}${player_name} places tile ${tokenIcon2} on position ${position}'), [
+            'player_name' => self::getActivePlayerName(),
             'tokenIcon1' => "player@$playerName",
             'tokenIcon2' => "tile@$tileId",
             'tileId' => $tileId,
@@ -502,13 +502,58 @@ class SevenKnightsBewitched extends Table
             EOF);
     }
 
+    function applyScore($knightsWin): void
+    {
+        $round = self::getGameStateValue(Globals::ROUND);
+        $score = $round >= MAX_ROUNDS ? 7 : ($knightsWin ? 2 : 3);
+        $check = $knightsWin ? 'NOT' : '';
+
+        $winners = self::getObjectListFromDb(<<<EOF
+            SELECT player_status.player_id, player_status.token 
+                 FROM player_status 
+                    INNER JOIN tile ON (tile.`character` = 0)
+                    LEFT JOIN inspection ON (inspection.tile_id = tile.tile_id)                    
+                 WHERE $check (tile.player_id = player_status.player_id 
+                    OR inspection.player_id IS NOT NULL 
+                        AND inspection.player_id = player_status.player_id) 
+            EOF);
+
+        if (count($winners) > 0) {
+            $tokens = 0;
+            $conditions = [];
+            foreach ($winners as ['player_id' => $playerId, 'token' => $token]) {
+                $tokens |= 1 << (int)$token;
+                $conditions[] = "player_id = $playerId";
+            }
+            $args = implode(' OR ', $conditions);
+
+            self::DbQuery(<<<EOF
+            UPDATE player
+            SET player_score = player_score + $score
+            WHERE $args
+            EOF);
+
+            $message =  $knightsWin ?
+                clienttranslate('The Knights team wins the round! ${tokenIcons} receive(s) ${score} points') :
+                clienttranslate('The Witch team wins the round! ${tokenIcons} receive(s) ${score} points');
+
+            self::notifyAllPlayers('score', $message, [
+                'tokenIcons' => "bitset@$tokens",
+                'score' => $score,
+                'preserve' => ['tokenIcons', 'score']
+            ]);
+        } else {
+            self::notifyAllPlayers('message', 'The Knights team loses! No points are awarded', []);
+        }
+    }
+
     function determineAnswer(string $playerId, int $tileId, int $question): int
     {
         if (self::isWitchTeam($playerId)) {
             return 0;
         }
         return (int)self::getUniqueValueFromDb(<<<EOF
-            SELECT (`character` & $question) <> 0
+            SELECT ((1 << `character`) & ($question << 1)) <> 0
             FROM tile WHERE tile_id = $tileId
             EOF) + 1;
     }
@@ -557,11 +602,22 @@ class SevenKnightsBewitched extends Table
         $this->gamestate->changeActivePlayer($captain);
 
         if ($character === 0 || self::isWitchTeam($captain)) {
-            self::notifyAllPlayers('message', clienttranslate('${tokenIcon}${player_name} belongs to the Witch Team'), [
-                'player_name' => $playerName,
-                'tokenIcon' => "player@$playerName",
-                'preserve' => ['tokenIcon']
-            ]);
+            if ($character !== 0) {
+                $witchName = self::getUniqueValueFromDb(<<<'EOF'
+                    SELECT player_name 
+                    FROM player NATURAL JOIN tile 
+                    WHERE tile.`character` = 0
+                    EOF);
+                self::notifyAllPlayers('message', clienttranslate('${tokenIcon1}${player_name1} is bewitched by ${tokenIcon2}${player_name2}!'), [
+                    'player_name1' => $playerName,
+                    'player_name2' => $witchName,
+                    'tokenIcon1' => "player@$playerName",
+                    'tokenIcon2' => "player@$witchName",
+                    'preserve' => ['tokenIcon1', 'tokenIcon2']
+                ]);
+            }
+
+            $this::applyScore(false);
             $this->gamestate->nextState('end');
         } else {
             $this->gamestate->nextState('appoint');
@@ -635,42 +691,7 @@ class SevenKnightsBewitched extends Table
             }
         }
 
-        $round = self::getGameStateValue(Globals::ROUND);
-        $score = $round >= MAX_ROUNDS ? 7 : ($knightsWin ? 2 : 3);
-        $check = $knightsWin ? 'NOT' : '';
-
-        $winners = self::getObjectListFromDb(<<<EOF
-            SELECT player_status.player_id, player_status.token 
-                 FROM player_status 
-                    INNER JOIN tile ON (tile.`character` = 0)
-                    LEFT JOIN inspection ON (inspection.tile_id = tile.tile_id)                    
-                 WHERE $check (tile.player_id = player_status.player_id 
-                    OR inspection.player_id = player_status.player_id) 
-            EOF);
-
-        $tokens = 0;
-        $conditions = [];
-        foreach ($winners as ['player_id' => $playerId, 'token' => $token]) {
-            $tokens |= 1 << (int)$token;
-            $conditions[] = "player_id = $playerId";
-        }
-        $args = implode(' OR ', $conditions);
-
-        self::DbQuery(<<<EOF
-            UPDATE player
-            SET player_score = player_score + $score
-            WHERE $args
-            EOF);
-
-        $message =  $knightsWin ?
-            clienttranslate('The Knights team wins the round! ${tokenIcons} receive(s) ${score} points') :
-            clienttranslate('The Witch team wins the round! ${tokenIcons} receive(s) ${score} points');
-
-        self::notifyAllPlayers('score', $message, [
-            'tokenIcons' => "bitset@$tokens",
-            'score' => $score,
-            'preserve' => ['tokenIcons', 'score']
-        ]);
+        $this::applyScore($knightsWin);
 
         $this->gamestate->nextState('');
     }

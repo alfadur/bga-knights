@@ -290,6 +290,11 @@
     pointer-events: none;
 }
 
+#mur-deployment .mur-placeholder.mur-inactive {
+    position: relative;
+    z-index: -1;
+}
+
 .mur-placeholder.mur-optional {
     outline: gray;
 }

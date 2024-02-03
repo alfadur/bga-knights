@@ -390,7 +390,10 @@ define([
                 case "deployKnights": {
                     this.addActionButton("mur-check", _("Fall in!"), () => {
                         this.request("check");
-                    }, null, null, "orange")
+                    }, null, null, "red");
+                    const ready = document.querySelectorAll(".mur-placeholder:not(.mur-optional):not(.mur-inactive) > .mur-tile").length ===
+                        document.querySelectorAll(".mur-placeholder:not(.mur-optional):not(.mur-inactive)").length
+                    document.getElementById("mur-check").classList.toggle("disabled", !ready);
                     break;
                 }
             }
@@ -569,8 +572,6 @@ define([
             const tile = document.getElementById(`mur-tile-${data.args.tileId}`);
             const place = document.getElementById(`mur-placeholder-${data.args.position}`);
             place.appendChild(tile);
-            const ready = document.querySelectorAll(".mur-placeholder:not(.mur-optional):not(.mur-inactive) > *").length === 0;
-            document.getElementById("mur-check").classList.toggle("disabled", ready);
         })
 
         this.notifqueue.setSynchronous("reveal", 500);
