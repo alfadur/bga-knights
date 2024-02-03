@@ -191,7 +191,7 @@ class SevenKnightsBewitched extends Table
 
         $tiles = self::getTiles($currentPlayerId);
 
-        $inspections = self::DbQuery("SELECT * FROM inspection");
+        $inspections = self::getObjectListFromDb('SELECT * FROM inspection');
 
         return [
             'players' => $players,

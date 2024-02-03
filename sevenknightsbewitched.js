@@ -22,11 +22,22 @@ function clearTag(tag) {
     }
 }
 
-function createElement(parent, html) {
-    const element = parent.appendChild(
-        document.createElement("div"));
+function createElement(parent, html, position) {
+    const element = typeof position === "number" ?
+        parent.insertBefore(document.createElement("div"), parent.children[position]) :
+        parent.appendChild(document.createElement("div"));
     element.outerHTML = html;
-    return parent.lastElementChild;
+    return typeof position === "number" ?
+        parent.children[position] :
+        parent.lastElementChild;
+}
+
+function getElementCenter(element) {
+    const bounds = element.getBoundingClientRect();
+    return {
+        x: (bounds.left + bounds.right) / 2,
+        y: (bounds.top + bounds.bottom) / 2
+    }
 }
 
 function createPlayer(index, angle, player) {
@@ -93,7 +104,7 @@ function createPlaceholder(index, unordered, optional, inactive) {
     if (inactive) {
         classes.push("mur-inactive");
     }
-    return `<div id="mur-placeholder-${index + 1}" class="${classes.join("")}" data-number="${index + 1}"></div>`
+    return `<div id="mur-placeholder-${index + 1}" class="${classes.join(" ")}" data-number="${index + 1}"></div>`
 }
 
 function createArrow(token) {
@@ -156,7 +167,7 @@ define([
 
         for (const place of document.querySelectorAll(" .mur-placeholder")) {
             if (place.classList.contains("mur-inactive")) {
-                createElement(place, createLeftoverTile(index + 1), undefined);
+                createElement(place, createLeftoverTile(place.dataset.number), undefined);
             } else {
                 place.addEventListener("click", event => {
                     event.stopPropagation();
@@ -178,10 +189,10 @@ define([
             return (parseInt(player.no) - 1 - currentIndex + playerCount) % playerCount;
         }
 
-        const extraPlayer = data.tiles.some(tile =>
+        const extraTiles = data.tiles.filter(tile =>
             tile.player_id === null);
 
-        const areaCount = extraPlayer ? playerCount + 1 : playerCount;
+        const areaCount = extraTiles.length ? playerCount + 1 : playerCount;
 
         function createPlayerArea(player, index) {
             const angle = 90 + index * 360 / areaCount;
@@ -206,7 +217,7 @@ define([
             createPlayerArea.call(this, player, index);
         }
 
-        if (extraPlayer) {
+        if (extraTiles.length) {
             createPlayerArea.call(this, null, areaCount - 1);
         }
 
@@ -218,7 +229,13 @@ define([
         }
 
         for (const descriptor of data.tiles) {
-            let tile;
+            const playerId = descriptor.player_id || "none";
+            const container = document.querySelector(`#mur-player-${playerId} .mur-tile-container`);
+            const tileSpace = createElement(container,
+                `<div id="mur-tile-placeholder-${descriptor.id}" class="mur-placeholder mur-inactive">
+                        <div id="mur-tile-arrows-${descriptor.id}" class="mur-arrows"></div>
+                    </div>`);
+
             let token;
 
             if (descriptor.player_id === null) {
@@ -228,16 +245,13 @@ define([
                 token = data.players[descriptor.player_id].token;
             }
 
+            let tile;
+
             if (descriptor.deployment !== null) {
                 const place = document.getElementById(`mur-placeholder-${descriptor.deployment}`);
-
                 tile  = createElement(place, createTile(descriptor, token));
             } else {
-                const playerId = descriptor.player_id || "none";
-                console.log(playerId);
-                const container = document.querySelector(`#mur-player-${playerId} .mur-tile-container`);
-
-                tile = createElement(container, createTile(descriptor, token))
+                tile = createElement(tileSpace, createTile(descriptor, token));
             }
 
             console.log("New tile", tile);
@@ -249,8 +263,8 @@ define([
         }
 
         for (const inspection of data.inspections) {
-            const tile = document.getElementById(`mur-tile-${inspection.tile_id}`);
-            createElement(tile, createArrow(data.players[inspection.player_id].token));
+            const place = document.getElementById(`mur-tile-arrows-${inspection.tile_id}`);
+            createElement(place, createArrow(data.players[inspection.player_id].token), 0);
         }
 
         this.setupNotifications();
@@ -464,6 +478,25 @@ define([
         }
     },
 
+    animateArrow(playerId, tileId) {
+        const source = document.getElementById(`player_board_${playerId}`);
+        const place = document.getElementById(`mur-tile-arrows-${tileId}`);
+        const arrow = createElement(place, createArrow(this.gamedatas.players[playerId].token), 0);
+
+        const from = getElementCenter(source);
+        const to = getElementCenter(arrow);
+        const dX = from.x - to.x;
+        const dY = from.y - to.y;
+
+        arrow.style.setProperty("--x", `${dX}px`);
+        arrow.style.setProperty("--y", `${dY}px`);
+        arrow.classList.add("mur-animated");
+
+        arrow.addEventListener("animationend",
+            () => arrow.classList.remove("mur-animated"),
+            {once: true});
+    },
+
     onPlayerClick(player) {
         const element = document.getElementById(`mur-player-${player.id}`);
 
@@ -518,9 +551,7 @@ define([
 
         dojo.subscribe("inspect", this, data => {
             console.log(data);
-            const tile = document.querySelector(`#mur-tile-${data.args.tileId}`);
-
-            createElement(tile, createArrow(this.gamedatas.players[data.args.playerId].token));
+            this.animateArrow(data.args.playerId, data.args.tileId);
         });
 
         dojo.subscribe("reveal", this, data => {

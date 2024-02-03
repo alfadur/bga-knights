@@ -207,6 +207,14 @@
         translateZ(calc(var(--tile-depth) / 2));
 }
 
+.mur-arrows {
+    display: flex;
+    flex-flow: column-reverse nowrap;
+    position: absolute;
+    top: calc(var(--tile-height) + 4px);
+    pointer-events: none;
+}
+
 .mur-arrow {
     --sprite-x: 0;
     --sprite-y: 0;
@@ -214,7 +222,7 @@
     --arrow-height: 68px;
     width: var(--arrow-width);
     height: var(--arrow-height);
-    margin-top: calc((var(--tile-height) + var(--arrow-height)) / 2);
+    margin-bottom: -45px;
     background-image: url("img/arrows.jpg");
     background-size:
         calc(var(--arrow-width) * 4)
@@ -222,7 +230,35 @@
     background-position:
         calc(var(--sprite-x) * var(--arrow-width) * -1)
         calc(var(--sprite-y) * var(--arrow-height) * -1);
+    box-shadow: 0 1px 1px black;
+    transition: margin 200ms ease-in;
     pointer-events: none;
+}
+
+.mur-arrow.mur-animated {
+    --x: 0px;
+    --y: 0px;
+    --angle: 0deg;
+
+    position: relative;
+    z-index: 1;
+    margin-top: 50px;
+    animation-name: follow-path;
+    animation-duration: 800ms;
+    animation-timing-function: ease-in-out;
+    transform: translate(var(--x), var(--y)) rotate(-90deg);
+}
+
+@keyframes follow-path {
+    0% {
+        opacity: 0;
+    }
+    20% {
+        opacity: 1;
+    }
+    100% {
+        transform: none;
+    }
 }
 
 #mur-deployment {
@@ -243,6 +279,9 @@
     align-items: center;
     width: var(--tile-width);
     height: var(--tile-height);
+}
+
+#mur-deployment .mur-placeholder {
     outline: dotted #7e6b27 4px;
     transition: box-shadow 200ms ease-in;
 }
@@ -287,10 +326,13 @@
     color: cornflowerblue;
 }
 
-.mur-placeholder .mur-tile {
+.mur-tile {
     position: absolute;
-    inset: 0;
     margin: auto;
+}
+
+#mur-deployment .mur-placeholder.mur-inactive .mur-tile {
+    pointer-events: none;
 }
 
 .mur-question-text {
