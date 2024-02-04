@@ -192,11 +192,13 @@ class SevenKnightsBewitched extends Table
         $tiles = self::getTiles($currentPlayerId);
 
         $inspections = self::getObjectListFromDb('SELECT * FROM inspection');
+        $questions = self::getObjectListFromDb('SELECT * FROM question');
 
         return [
             'players' => $players,
             'tiles' => $tiles,
             'inspections' => $inspections,
+            'questions' => $questions,
             'mode' => self::getGameStateValue(GameOption::MODE),
             'coop' => self::getGameStateValue(GameOption::COOP)
         ];
@@ -734,7 +736,10 @@ class SevenKnightsBewitched extends Table
 
     function argAnswer(): array
     {
+        $question = self::getObjectFromDb(
+            'SELECT * FROM question WHERE answer IS NULL');
         return [
+            'question' => $question,
             '_private' => [
                 'active' => [
                     'answer' => self::getGameStateValue(Globals::ANSWER)

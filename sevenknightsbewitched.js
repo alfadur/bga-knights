@@ -136,6 +136,8 @@ define([
         this.selectedTile = null;
         this.selectedPlayer = null;
         this.tokenTiles = Array(8).fill(null);
+        this.bubble = createElement(document.getElementById("mur-play-area"),
+            `<div id="mur-question-bubble" class="discussion_bubble"></div>`);
     },
 
     setup(data) {
@@ -297,6 +299,10 @@ define([
                     }
                     break;
                 }
+                case "answer": {
+                    this.displayQuestion(args.args.question);
+                    break;
+                }
                 case "deployKnights": {
                     for (const tile of document.querySelectorAll(".mur-tile:not(.mur-leftover)")) {
                         tile.classList.add("mur-selectable");
@@ -330,6 +336,11 @@ define([
                 case "question":
                 case "deployKnights": {
                     clearTag("mur-selectable");
+                    break;
+                }
+                case "answer": {
+                    this.bubble.parentElement = null;
+                    break;
                 }
             }
         }
@@ -481,6 +492,42 @@ define([
         }
     },
 
+    displayQuestion(question) {
+        const player = document.getElementById(`mur-player-${question.player_id}`);
+        const recipient = this.gamedatas.players[question.recipient_id];
+        const tileOwner = this.gamedatas.tiles.filter(tile => tile.id === question.tile_id)[0].player_id;
+        const bitset = parseInt(question.question);
+        const isSingleNumber = (bitset & bitset - 1) === 0;
+
+        const message = isSingleNumber ?
+            (tileOwner === recipient.id ?
+                _("${tokenIcon1}${player_name1}, is your tile ${numberIcon}?") :
+                _("${tokenIcon1}${player_name1}, is ${tokenIcon2}${player_name2}'s tile ${numberIcon}?")) :
+            (tileOwner === recipient.id ?
+                _("${tokenIcon1}${player_name1}, is your tile one of ${numberIcon}?") :
+                _("${tokenIcon1}${player_name1}, is ${tokenIcon2}${player_name2}'s tile one of ${numberIcon}?"));
+        const args = {
+            player_name1: `<span style="color: #${recipient.color}">${recipient.name}</span>`,
+            tokenIcon1: `player@${recipient.name}`,
+            numberIcon: question.question
+        };
+
+        if (tileOwner !== recipient.id) {
+            if (tileOwner === null) {
+                args.player_name2 = _("Knight-errant");
+                args.tokenIcon2 = `tile@${question.tile_id}`;
+            } else {
+                const owner = this.gamedatas.players[tileOwner];
+                args.player_name2 = `<span style="color: #${owner.color}">${owner.name}</span>`;
+                args.tokenIcon2 = `player@${owner.name}`
+            }
+        }
+
+        player.appendChild(this.bubble);
+
+        this.bubble.innerHTML = this.format_string_recursive(message, args);
+    },
+
     animateArrow(playerId, tileId) {
         const source = document.getElementById(`player_board_${playerId}`);
         const place = document.getElementById(`mur-tile-arrows-${tileId}`);
@@ -602,7 +649,7 @@ define([
         }
 
         const [type, content] = tokens.split("@", 2);
-        console.log("formatTokens", type, content);
+
         switch (type) {
             case "player": {
                 const players =
@@ -612,7 +659,6 @@ define([
             }
             case "tile": {
                 const tile = this.gamedatas.tiles.filter(tile => tile.id === content)[0];
-                console.log(tile);
                 const token = this.tokenTiles.indexOf(tile);
                 return token >= 0 ? createToken(token) : "";
             }

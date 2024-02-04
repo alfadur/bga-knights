@@ -23,6 +23,7 @@
     position: relative;
     width: var(--play-width);
     height: calc(var(--play-width) * 3 / 4);
+    margin-bottom: calc(var(--tile-height) / 2);
 }
 
 .mur-player {
@@ -336,6 +337,10 @@
     margin: auto;
 }
 
+#mur-deployment .mur-placeholder .mur-tile {
+    z-index: 1;
+}
+
 #mur-deployment .mur-placeholder.mur-inactive .mur-tile {
     pointer-events: none;
 }
@@ -394,6 +399,12 @@
 #mur-question-dialog-buttons {
     display: flex;
     flex-flow: row-reverse nowrap;
+}
+
+.mur-player #mur-question-bubble {
+    display: block;
+    width: 250px;
+    text-align: center;
 }
 
 .mur-icon {
