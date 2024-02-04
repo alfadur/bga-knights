@@ -546,6 +546,34 @@ define([
             {once: true});
     },
 
+    animateTiles(moves) {
+        for (const move of moves) {
+            const from = getElementCenter(move.tile);
+            const to = getElementCenter(move.place);
+            move.dX = from.x - to.x;
+            move.dY = from.y - to.y;
+        }
+
+        for (const {place, tile, dX, dY} of moves) {
+            const delay = 100;
+            tile.style.animationDelay = `${delay}ms`;
+            tile.classList.add("mur-animated");
+
+            setTimeout(() => {
+                place.appendChild(tile);
+                tile.style.setProperty("--x", `${dX}px`);
+                tile.style.setProperty("--y", `${dY}px`);
+                tile.addEventListener("animationend",
+                    () => {
+                        tile.style.setProperty("--x", "0px");
+                        tile.style.setProperty("--y", "0px");
+                        tile.classList.remove("mur-animated")
+                    },
+                    {once: true});
+            }, delay);
+        }
+    },
+
     onPlayerClick(player) {
         const element = document.getElementById(`mur-player-${player.id}`);
 
@@ -617,7 +645,18 @@ define([
         dojo.subscribe("move", this, data => {
             const tile = document.getElementById(`mur-tile-${data.args.tileId}`);
             const place = document.getElementById(`mur-placeholder-${data.args.position}`);
-            place.appendChild(tile);
+            const moves = [{tile, place}];
+            const oldTile = place.firstElementChild;
+            if (oldTile) {
+                const returnPlace = tile.parentElement.classList.contains("mur-inactive") ?
+                    document.getElementById(`mur-tile-placeholder-${oldTile.dataset.id}`) :
+                    tile.parentElement;
+                moves.push({
+                    tile: oldTile,
+                    place: returnPlace
+                })
+            }
+            this.animateTiles(moves);
         })
 
         this.notifqueue.setSynchronous("reveal", 500);

@@ -453,18 +453,14 @@ class SevenKnightsBewitched extends Table
             new BgaUserException('Invalid position');
         }
         self::DbQuery(<<<EOF
-            UPDATE tile LEFT JOIN tile AS other 
-                ON other.deployment = $position                
-            SET tile.deployment = $position
-            WHERE tile.tile_id = $tileId AND other.tile_id IS NULL
+            UPDATE tile INNER JOIN tile AS previous ON (previous.tile_id = $tileId)
+            SET tile.deployment = IF(tile.tile_id = $tileId, $position, previous.deployment)
+            WHERE tile.tile_id = $tileId OR tile.deployment = $position
             EOF);
 
         if (self::DbAffectedRow() === 0) {
             throw new BgaUserException("Occupied position");
         }
-
-        $count = self::getUniqueValueFromDb(
-            'SELECT COUNT(deployment) FROM tile');
 
         $playerName = self::getActivePlayerName();
         self::notifyAllPlayers("move", clienttranslate('${tokenIcon1}${player_name} places tile ${tokenIcon2} on position ${position}'), [
@@ -737,7 +733,7 @@ class SevenKnightsBewitched extends Table
     function argAnswer(): array
     {
         $question = self::getObjectFromDb(
-            'SELECT * FROM question WHERE answer IS NULL');
+            'SELECT * FROM question ORDER BY question_id DESC LIMIT 1');
         return [
             'question' => $question,
             '_private' => [

@@ -75,25 +75,17 @@
     --token-x: 0;
     --token-y: 0;
 
+    position: absolute;
     width: var(--tile-width);
     height: var(--tile-height);
     transform-origin: center;
+    top: 0;
     transition:
-            transform 600ms ease-in-out,
-            box-shadow 200ms ease-out;
+        box-shadow 200ms ease-out,
+        top 100ms ease-in;
     perspective: 200px;
     perspective-origin: center;
     pointer-events: none;
-}
-
-#mur-play-area > .mur-tile {
-    position: absolute;
-    left: 0;
-    right: 0;
-    top: 0;
-    bottom: 0;
-    margin: auto;
-    transform: translateY(calc(-10px * var(--index)));
 }
 
 .mur-tile.mur-selectable {
@@ -106,6 +98,25 @@
 
 .mur-tile.mur-selected {
     box-shadow: 0 0 16px #33ffa9;
+}
+
+.mur-tile.mur-animated {
+    --x: 0px;
+    --y: 0px;
+
+    z-index: 2 !important;
+    top: -20px;
+    animation-name: tile-follow-path;
+    animation-duration: 700ms;
+    animation-timing-function: ease-in-out;
+    transform: translate(var(--x), var(--y));
+    transition: top 100ms ease-in-out;
+}
+
+@keyframes tile-follow-path {
+    100% {
+        transform: none;
+    }
 }
 
 .mur-tile-front, .mur-tile-side, .mur-tile-back {
@@ -244,13 +255,13 @@
     position: relative;
     z-index: 1;
     margin-top: 50px;
-    animation-name: follow-path;
+    animation-name: arrow-follow-path;
     animation-duration: 800ms;
     animation-timing-function: ease-in-out;
     transform: translate(var(--x), var(--y)) rotate(-90deg);
 }
 
-@keyframes follow-path {
+@keyframes arrow-follow-path {
     0% {
         opacity: 0;
     }
@@ -330,11 +341,6 @@
 
 .mur-placeholder.mur-selectable:hover::before {
     color: cornflowerblue;
-}
-
-.mur-tile {
-    position: absolute;
-    margin: auto;
 }
 
 #mur-deployment .mur-placeholder .mur-tile {
