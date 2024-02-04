@@ -136,8 +136,6 @@ define([
         this.selectedTile = null;
         this.selectedPlayer = null;
         this.tokenTiles = Array(8).fill(null);
-        this.bubble = createElement(document.getElementById("mur-play-area"),
-            `<div id="mur-question-bubble" class="discussion_bubble"></div>`);
     },
 
     setup(data) {
@@ -339,7 +337,8 @@ define([
                     break;
                 }
                 case "answer": {
-                    this.bubble.parentElement = null;
+                    let bubble = document.getElementById("mur-question-bubble");
+                    bubble.parentElement.removeChild(bubble);
                     break;
                 }
             }
@@ -523,9 +522,9 @@ define([
             }
         }
 
-        player.appendChild(this.bubble);
-
-        this.bubble.innerHTML = this.format_string_recursive(message, args);
+        const text = this.format_string_recursive(message, args);
+        createElement(player,
+            `<div id="mur-question-bubble" class="discussion_bubble">${text}</div>`);
     },
 
     animateArrow(playerId, tileId) {
