@@ -308,8 +308,10 @@ define([
                     break;
                 }
                 case "clientDeploy": {
-                    for (const space of document.querySelectorAll(".mur-placeholder")) {
-                        space.classList.add("mur-selectable");
+                    for (const space of document.querySelectorAll(".mur-placeholder:not(.mur-inactive)")) {
+                        if (this.selectedTile.parentElement !== space) {
+                            space.classList.add("mur-selectable");
+                        }
                     }
                     break;
                 }
@@ -401,9 +403,8 @@ define([
                     this.addActionButton("mur-check", _("Fall in!"), () => {
                         this.request("check");
                     }, null, null, "red");
-                    const ready = document.querySelectorAll(".mur-placeholder:not(.mur-optional):not(.mur-inactive) > .mur-tile").length ===
-                        document.querySelectorAll(".mur-placeholder:not(.mur-optional):not(.mur-inactive)").length
-                    document.getElementById("mur-check").classList.toggle("disabled", !ready);
+
+                    this.updateDeployment();
                     break;
                 }
             }
@@ -574,6 +575,48 @@ define([
         }
     },
 
+    revealCharacter(tileId, character) {
+        const tile = document.querySelector(`#mur-tile-${tileId}`);
+        tile.style.setProperty("--character", character);
+        if (!tile.classList.contains("mur-flipped")) {
+            tile.classList.add("mur-flipped");
+            return true;
+        }
+        return false;
+    },
+
+    updateDeployment() {
+        const button = document.getElementById("mur-check");
+        if (button) {
+            const ready = document.querySelectorAll(".mur-placeholder:not(.mur-optional):not(.mur-inactive) > .mur-tile").length ===
+                document.querySelectorAll(".mur-placeholder:not(.mur-optional):not(.mur-inactive)").length;
+            button.classList.toggle("disabled", !ready);
+        }
+    },
+
+    roundCleanup() {
+        const deployedTiles = document.querySelectorAll(".mur-placeholder:not(.mur-inactive) .mur-tile");
+        const moves = [];
+        for (const tile of deployedTiles) {
+            const place = document.getElementById(`mur-tile-placeholder-${tile.dataset.id}`);
+            moves.push({tile, place});
+        }
+        if (moves.length > 0) {
+            this.animateTiles(moves);
+        }
+
+        setTimeout(() => {
+            const tiles = document.querySelectorAll(".mur-tile:not(.mur-leftover)");
+            for (const tile of tiles) {
+                tile.classList.remove("mur-flipped");
+            }
+        }, 0);
+
+        for (const arrow of document.querySelectorAll(".mur-arrow")) {
+            arrow.parentElement.removeChild(arrow);
+        }
+    },
+
     onPlayerClick(player) {
         const element = document.getElementById(`mur-player-${player.id}`);
 
@@ -609,22 +652,19 @@ define([
 
     onPlaceholderClick(place) {
         if (this.checkAction("clientDeploy", true)) {
-            this.request("deploy", {
-                tileId: this.selectedTile.dataset.id,
-                position: place.dataset.number
-            });
+            if (place.classList.contains("mur-selectable")) {
+                this.request("deploy", {
+                    tileId: this.selectedTile.dataset.id,
+                    position: place.dataset.number
+                });
+            }
         }
     },
 
     setupNotifications() {
         console.log("notifications subscriptions setup");
-        dojo.subscribe("round", this, () => {
-            const tiles = document.querySelectorAll(".mur-tile:not(.mur-leftover)");
-            for (const tile of tiles) {
-                tile.classList.remove("mur-flipped");
-            }
-        });
-        this.notifqueue.setSynchronous('round', 600);
+        dojo.subscribe("round", this, () => this.roundCleanup());
+        this.notifqueue.setSynchronous('round', 800);
 
         dojo.subscribe("inspect", this, data => {
             console.log(data);
@@ -633,14 +673,15 @@ define([
 
         dojo.subscribe("reveal", this, data => {
             console.log(data);
-            const tile = document.querySelector(`#mur-tile-${data.args.tileId}`);
-            tile.style.setProperty("--character", data.args.character);
-            tile.classList.add("mur-flipped");
+            const delay = this.revealCharacter(data.args.tileId, data.args.character) ? 1000 : 0;
+            this.notifqueue.setSynchronousDuration(delay);
         });
-
+        this.notifqueue.setSynchronous('reveal');
         dojo.subscribe("question", this, data => {
             console.log(data);
         });
+
+        this.notifqueue.setSynchronous('vote', 1000);
 
         dojo.subscribe("move", this, data => {
             const tile = document.getElementById(`mur-tile-${data.args.tileId}`);
@@ -657,15 +698,29 @@ define([
                 })
             }
             this.animateTiles(moves);
-        })
+            setTimeout(() => this.updateDeployment(), 0);
+        });
 
-        this.notifqueue.setSynchronous("reveal", 500);
+        dojo.subscribe('score', this, data => {
+            const score = parseInt(data.args.score);
+            for (const playerId of data.args.players) {
+                this.scoreCtrl[parseInt(playerId)].incValue(score);
+            }
+        });
+    },
+
+    formatList(...numbers) {
+        return numbers
+            .map(n => parseInt(n) > 0 ?
+                `<div class="mur-single-number mur-icon" data-number="${n}"></div>` :
+                `<div class="mur-icon mur-witch"></div>`)
+            .join("");
     },
 
     formatNumbers(bitmask) {
         bitmask = parseInt(bitmask);
         if (bitmask === 0) {
-            return `<div class="mur-icon mur-witch"></div>`;
+            return this.formatList(0);
         } else {
             const values = [];
             for (let i = 0; i < 7; ++i) {
@@ -673,20 +728,16 @@ define([
                     values.push(i + 1);
                 }
             }
-            return values
-                .map(n => `<div class="mur-single-number mur-icon" data-number="${n}"></div>`)
-                .join("");
+            return this.formatList(...values);
         }
     },
 
-    formatTokens(tokens) {
+    formatTokens(type, content) {
         function createToken(token) {
             token = parseInt(token);
             const style = `--token-x: ${token % 4}; --token-y: ${Math.floor(token / 4)}`;
             return `<div class="mur-icon mur-token" style="${style}"></div>`;
         }
-
-        const [type, content] = tokens.split("@", 2);
 
         switch (type) {
             case "player": {
@@ -713,12 +764,19 @@ define([
         return "";
     },
 
+    formatPosition(number) {
+        const text = this.gameMode === GameMode.standard ? number : `${number}+`;
+        return `<div class="mur-icon mur-position" data-position="${text}"></div>`;
+    },
+
     format_string_recursive(log, args) {
         if (args && !("substitutionComplete" in args)) {
             args.substitutionComplete = true;
             const formatters = {
-                'number': this.formatNumbers,
-                'token': this.formatTokens
+                list: this.formatList,
+                number: this.formatNumbers,
+                token: this.formatTokens,
+                position: this.formatPosition,
             };
             for (const iconType of Object.keys(formatters)) {
                 const icons = Object.keys(args).filter(name => name.startsWith(`${iconType}Icon`));

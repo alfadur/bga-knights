@@ -250,8 +250,8 @@ class SevenKnightsBewitched extends Table
         self::notifyAllPlayers('inspect', clienttranslate('${tokenIcon1}${player_name1} inspects ${tokenIcon2}${player_name2}\'s tile'), [
             'player_name1' => $playerName,
             'player_name2' => $targetName,
-            'tokenIcon1' => "player@$playerName",
-            'tokenIcon2' => "tile@$tileId",
+            'tokenIcon1' => "player,$playerName",
+            'tokenIcon2' => "tile,$tileId",
             'playerId' => self::getActivePlayerId(),
             'tileId' => $tileId,
             'preserve' => ['tokenIcon1', 'tokenIcon2']
@@ -262,7 +262,7 @@ class SevenKnightsBewitched extends Table
             clienttranslate('${tokenIcon}${player_name} turns out to be ${numberIcon}');
         self::notifyPlayer($activePlayerId, 'reveal', $message, [
             'player_name' => $targetName,
-            'tokenIcon' => "tile@$tileId",
+            'tokenIcon' => "tile,$tileId",
             'tileId' => $tileId,
             'character' => $character,
             'numberIcon' => $character === 0 ? $character : (1 << ($character - 1)),
@@ -328,8 +328,8 @@ class SevenKnightsBewitched extends Table
         $args = [
             'player_name1' => $playerName,
             'player_name2' => $targetName,
-            'tokenIcon1' => "player@$playerName",
-            'tokenIcon2' => "player@$targetName",
+            'tokenIcon1' => "player,$playerName",
+            'tokenIcon2' => "player,$targetName",
             'preserve' => ['tokenIcon1', 'tokenIcon2']
         ];
 
@@ -351,11 +351,11 @@ class SevenKnightsBewitched extends Table
                 clienttranslate('${tokenIcon1}${player_name1} asks ${tokenIcon2}${player_name2}, "is ${tokenIcon3}${player_name3}\'s tile one of ${numberIcons}?"');
 
             if ($tileOwner === null) {
-                $tileToken = "tile@$tileId";
+                $tileToken = "tile,$tileId";
                 $ownerName = 'Knight-Errant';
             } else {
                 $ownerName =  self::getPlayerNameById($tileOwner);
-                $tileToken = "player@$ownerName";
+                $tileToken = "player,$ownerName";
             }
 
             $args['player_name3'] = $ownerName;
@@ -392,7 +392,7 @@ class SevenKnightsBewitched extends Table
         self::notifyAllPlayers('answer', $message, [
             'player_name' => $playerName,
             'answer' => $answer,
-            'tokenIcon' => "player@$playerName",
+            'tokenIcon' => "player,$playerName",
             'preserve' => ['tokenIcon']
         ]);
         $this->gamestate->nextState('');
@@ -462,14 +462,20 @@ class SevenKnightsBewitched extends Table
             throw new BgaUserException("Occupied position");
         }
 
+        $owner = self::getUniqueValueFromDb(
+            "SELECT player_id FROM tile WHERE tile_id = $tileId");
+        $ownerName = $owner ? self::getPlayerNameById($owner) : 'Knight-Errant';
+
         $playerName = self::getActivePlayerName();
-        self::notifyAllPlayers("move", clienttranslate('${tokenIcon1}${player_name} places tile ${tokenIcon2} on position ${position}'), [
-            'player_name' => self::getActivePlayerName(),
-            'tokenIcon1' => "player@$playerName",
-            'tokenIcon2' => "tile@$tileId",
+        self::notifyAllPlayers("move", clienttranslate('${tokenIcon1}${player_name1} places ${tokenIcon2}${player_name2}\'s tile on position ${positionIcon}'), [
+            'player_name1' => self::getActivePlayerName(),
+            'tokenIcon1' => "player,$playerName",
+            'player_name2' => $ownerName,
+            'tokenIcon2' => "tile,$tileId",
+            'positionIcon' => $position,
             'tileId' => $tileId,
             'position' => $position,
-            'preserve' => ['tileIcon1', 'tileIcon2', 'position']
+            'preserve' => ['tileIcon1', 'tileIcon2', 'positionIconS']
         ]);
 
         $this->gamestate->nextState('deploy');
@@ -483,6 +489,12 @@ class SevenKnightsBewitched extends Table
         if ($count < self::getPlayersNumber() - 1) {
             throw new BgaUserException('Not enough tiles');
         }
+
+        $playerName = self::getActivePlayerName();
+        self::notifyAllPlayers('message', clienttranslate('${tokenIcon}${player_name} reveals the Knights'), [
+            'player_name' => $playerName,
+            'tokenIcon' => "player,$playerName"
+        ]);
 
         $this->gamestate->nextState('check');
     }
@@ -516,32 +528,37 @@ class SevenKnightsBewitched extends Table
                         AND inspection.player_id = player_status.player_id) 
             EOF);
 
+        self::dump('winners', $winners);
+
         if (count($winners) > 0) {
             $tokens = 0;
             $conditions = [];
+            $players = [];
             foreach ($winners as ['player_id' => $playerId, 'token' => $token]) {
                 $tokens |= 1 << (int)$token;
                 $conditions[] = "player_id = $playerId";
+                $players[] = $playerId;
             }
             $args = implode(' OR ', $conditions);
 
             self::DbQuery(<<<EOF
-            UPDATE player
-            SET player_score = player_score + $score
-            WHERE $args
-            EOF);
+                UPDATE player
+                SET player_score = player_score + $score
+                WHERE $args
+                EOF);
 
             $message =  $knightsWin ?
                 clienttranslate('The Knights team wins the round! ${tokenIcons} receive(s) ${score} points') :
                 clienttranslate('The Witch team wins the round! ${tokenIcons} receive(s) ${score} points');
 
             self::notifyAllPlayers('score', $message, [
-                'tokenIcons' => "bitset@$tokens",
+                'tokenIcons' => "bitset,$tokens",
                 'score' => $score,
-                'preserve' => ['tokenIcons', 'score']
+                'players' => $players,
+                'preserve' => ['tokenIcons']
             ]);
         } else {
-            self::notifyAllPlayers('message', 'The Knights team loses! No points are awarded', []);
+            self::notifyAllPlayers('message', 'The Knights team loses, so no points are awarded', []);
         }
     }
 
@@ -565,6 +582,7 @@ class SevenKnightsBewitched extends Table
             SELECT 
                 self.player_id, 
                 MAX(self.`character`) AS `character`,
+                MAX(self.tile_id) AS tile_id,
                 SUM(1 << voter.token) AS voters
             FROM (SELECT * FROM player_status NATURAL JOIN player NATURAL JOIN tile) AS self
                 INNER JOIN player_status AS voter ON voter.voted = self.player_id
@@ -578,22 +596,27 @@ class SevenKnightsBewitched extends Table
             EOF);
 
         foreach (array_reverse($votes) as ['player_id' => $player_id, 'voters' => $voters]) {
-            self::notifyAllPlayers('vote', clienttranslate('${player_name} is recommended by ${tokenIcons}'), [
-                'player_name' => self::getPlayerNameById($player_id),
-                'tokenIcons' => "bitset@$voters",
-                'preserve' => ['tokenIcons']
+            $playerName = self::getPlayerNameById($player_id);
+            self::notifyAllPlayers('vote', clienttranslate('${tokenIcon}${player_name} is recommended by ${tokenIcons}'), [
+                'player_name' => $playerName,
+                'tokenIcon' => "player,$playerName",
+                'tokenIcons' => "bitset,$voters",
+                'preserve' => ['tokenIcon', 'tokenIcons']
             ]);
         }
 
         $captain = $votes[0]['player_id'];
+        $tileId = $votes[0]['tile_id'];
         $character = (int)$votes[0]['character'];
         self::setGameStateValue(Globals::CAPTAIN, $captain);
         $playerName = self::getPlayerNameById($captain);
 
-        self::notifyAllPlayers('message', clienttranslate('${tokenIcon}${player_name} is appointed as the captain and is revealed to be ${numberIcon}'), [
+        self::notifyAllPlayers('reveal', clienttranslate('${tokenIcon}${player_name} is appointed as the captain and is revealed to be ${numberIcon}'), [
             'player_name' => $playerName,
-            'tokenIcon' => "player@$playerName",
+            'tokenIcon' => "player,$playerName",
             'numberIcon' => $character === 0 ? $character : (1 << ($character - 1)),
+            'tileId' => $tileId,
+            'character' => $character,
             'preserve' => ['tokenIcon', 'numberIcon']
         ]);
 
@@ -601,16 +624,19 @@ class SevenKnightsBewitched extends Table
 
         if ($character === 0 || self::isWitchTeam($captain)) {
             if ($character !== 0) {
-                $witchName = self::getUniqueValueFromDb(<<<'EOF'
-                    SELECT player_name 
-                    FROM player NATURAL JOIN tile 
-                    WHERE tile.`character` = 0
-                    EOF);
-                self::notifyAllPlayers('message', clienttranslate('${tokenIcon1}${player_name1} is bewitched by ${tokenIcon2}${player_name2}!'), [
+                ['player_name' => $witchName, 'tile_id' => $tileId] =
+                    self::getObjectFromDb(<<<'EOF'
+                        SELECT player_name, tile_id
+                        FROM player NATURAL JOIN tile 
+                        WHERE tile.`character` = 0
+                        EOF);
+                self::notifyAllPlayers('reveal', clienttranslate('${tokenIcon1}${player_name1} is bewitched by ${tokenIcon2}${player_name2}!'), [
                     'player_name1' => $playerName,
                     'player_name2' => $witchName,
-                    'tokenIcon1' => "player@$playerName",
-                    'tokenIcon2' => "player@$witchName",
+                    'tokenIcon1' => "player,$playerName",
+                    'tokenIcon2' => "player,$witchName",
+                    'tileId' => $tileId,
+                    'character' => $tileId,
                     'preserve' => ['tokenIcon1', 'tokenIcon2']
                 ]);
             }
@@ -667,26 +693,50 @@ class SevenKnightsBewitched extends Table
     function stFinalCheck(): void
     {
         $order = self::getObjectListFromDb(<<<EOF
-            SELECT `character` FROM tile
-            WHERE deployment IS NOT NULL
-            ORDER BY `deployment` ASC
-            EOF, true);
+            SELECT player_id, tile_id, `character`, deployment IS NOT NULL AS deployed  
+            FROM tile
+            ORDER BY -deployment DESC
+            EOF);
 
         $knightsWin = true;
+        self::dump("deployment order", $order);
 
-        if (count($order) < self::getPlayersNumber()) {
-            $knightsWin = false;
-        } else {
-            $previous = 0;
-            foreach ($order as $character) {
-                $character = (int)$character;
+        $list = [];
+        $previous = 0;
+        $missingTile = null;
+
+        foreach ($order as $tile) {
+            $character = (int)$tile['character'];
+            if ((int)$tile['deployed']) {
                 if ($character <= $previous) {
                     $knightsWin = false;
-                    break;
                 } else {
                     $previous = $character;
                 }
+                self::notifyAllPlayers("reveal", '', [
+                    'tileId' => $tile['tile_id'],
+                    'character' => $character
+                ]);
+                $list[] = $character;
+            } else if ($character !== 0) {
+                $missingTile = $tile;
+                break;
             }
+        }
+
+        self::notifyAllPlayers('message', clienttranslate('Revealed order is ${listIcon}'), [
+            'listIcon' => implode(',', $list)
+        ]);
+
+        if ($missingTile !== null) {
+            self::notifyAllPlayers("reveal", clienttranslate('${tokenIcon}${player_name}\'s tile ${numberIcon} has not been included'), [
+                'player_name' => self::getPlayerNameById($missingTile['player_id']),
+                'tokenIcon' => "tile,$missingTile[tile_id]",
+                'numberIcon' => 1 << ((int)$missingTile['character'] - 1),
+                'tileId' => $missingTile['tile_id'],
+                'character' => $missingTile['character'],
+                'preserve' => ['tokenIcon', 'numberIcon'],
+            ]);
         }
 
         $this::applyScore($knightsWin);
@@ -762,6 +812,7 @@ class SevenKnightsBewitched extends Table
 
     function __skipToVote()
     {
+        self::setGameStateInitialValue(Globals::ACTIONS_TAKEN, self::getPlayersNumber() * 2);
         $this->gamestate->jumpToState(State::VOTE);
     }
 

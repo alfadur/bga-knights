@@ -1,7 +1,7 @@
 
 class notifqueue {
     setSynchronous(name, timeMs) {}
-    setSynchronousDuraction(timeMs) {}
+    setSynchronousDuration(timeMs) {}
 }
 class Game {
     isCurrentPlayerActive() { return false; }

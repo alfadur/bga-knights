@@ -420,7 +420,7 @@
     pointer-events: none;
 }
 
-.mur-single-number.mur-icon {
+.mur-single-number.mur-icon, .mur-position.mur-icon {
     width: 22px;
     height: 22px;
     font-size: 20px;
@@ -449,4 +449,12 @@
         calc(var(--icon-size) * -1.13);
     border: 1px solid #d2403180;
     box-shadow: 0 2px 3px black;
+}
+
+.mur-position.mur-icon:after {
+    display: block;
+    content: attr(data-position);
+    line-height: 20px;
+    color: brown;
+    font-weight: bold;
 }
