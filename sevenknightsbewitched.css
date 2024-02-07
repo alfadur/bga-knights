@@ -307,8 +307,8 @@
     z-index: -1;
 }
 
-.mur-placeholder.mur-optional {
-    outline: gray;
+#mur-deployment .mur-placeholder.mur-optional {
+    outline: dotted #7e7e7e 4px;
 }
 
 .mur-placeholder.mur-selectable:hover {
@@ -330,13 +330,14 @@
     transition: color 100ms ease-in;
 }
 
-.mur-placeholder.mur-optional::before {
-    color: darkgray;
-}
-
 .mur-placeholder.mur-unordered::before {
     content: attr(data-number) "+";
     font-size: calc(var(--tile-height) / 4);
+}
+
+.mur-placeholder.mur-optional::before {
+    color: #7e7e7e;
+    content: attr(data-number) "?";
 }
 
 .mur-placeholder.mur-selectable:hover::before {
