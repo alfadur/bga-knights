@@ -204,6 +204,27 @@ class SevenKnightsBewitched extends Table
         ];
     }
 
+    function recordAnswer(string $playerName, int $answer): void
+    {
+        self::DbQuery(<<<EOF
+            UPDATE question
+            SET answer = $answer
+            WHERE answer IS NULL
+            EOF);
+
+        $message = $answer ?
+            clienttranslate('${tokenIcon}${player_name} answers "Yes"') :
+            clienttranslate('${tokenIcon}${player_name} answers "No"');
+
+        self::notifyAllPlayers('answer', $message, [
+            'player_name' => $playerName,
+            'answer' => $answer,
+            'tokenIcon' => "player,$playerName",
+            'preserve' => ['tokenIcon']
+        ]);
+    }
+
+
     function inspect(int $tileId): void
     {
         self::checkAction('inspect');
@@ -372,29 +393,11 @@ class SevenKnightsBewitched extends Table
     {
         self::checkAction('answer');
         $answer = $answer ? 1 : 0;
-
         $expectedAnswer = (int)self::getGameStateValue(Globals::ANSWER);
         if ($expectedAnswer > 0 && $expectedAnswer - 1 !== $answer) {
             throw new BgaUserException('Invalid answer');
         }
-
-        self::DbQuery(<<<EOF
-            UPDATE question
-            SET answer = $answer
-            WHERE answer IS NULL
-            EOF);
-
-        $message = $answer ?
-            clienttranslate('${tokenIcon}${player_name} answers "Yes"') :
-            clienttranslate('${tokenIcon}${player_name} answers "No"');
-
-        $playerName = self::getActivePlayerName();
-        self::notifyAllPlayers('answer', $message, [
-            'player_name' => $playerName,
-            'answer' => $answer,
-            'tokenIcon' => "player,$playerName",
-            'preserve' => ['tokenIcon']
-        ]);
+        $this->recordAnswer(self::getActivePlayerName(), $answer);
         $this->gamestate->nextState('');
     }
 
@@ -659,13 +662,18 @@ class SevenKnightsBewitched extends Table
                 EOF);
             if ($questionData !== null) {
                 ['recipient_id' => $asked, 'tile_id' => $askedTile, 'question' => $question] = $questionData;
+                $answer = $this->determineAnswer($asked, $askedTile, $question);
+                $coop = (int)self::getGameStateValue(GameOption::COOP);
 
-                self::setGameStateValue(Globals::ANSWER,
-                    $this->determineAnswer($asked, $askedTile, $question));
-                $this->gamestate->changeActivePlayer($asked);
-                $this->gamestate->nextState('answer');
+                if ($coop) {
+                    $this->recordAnswer(self::getPlayerNameById($asked), $answer - 1);
+                } else {
+                    self::setGameStateValue(Globals::ANSWER, $answer);
+                    $this->gamestate->changeActivePlayer($asked);
+                    $this->gamestate->nextState('answer');
 
-                return;
+                    return;
+                }
             }
 
             self::setGameStateValue(Globals::ASKER, 0);
