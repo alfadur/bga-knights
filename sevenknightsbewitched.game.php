@@ -872,7 +872,14 @@ class SevenKnightsBewitched extends Table
         $stateName = $state['name'];
 
         if ($state['type'] === FsmType::SINGLE_PLAYER) {
+            if ($stateName === 'deployKnight') {
+                $this->gamestate->jumpToState(State::NEXT_ROUND);
+            } else {
+                self::incGamestateValue(Globals::ACTIONS_TAKEN, 1);
+                $this->gamestate->jumpToState(State::DISPATCH_ACTION);
+            }
         } else if ($state['type'] === FsmType::MULTIPLE_PLAYERS) {
+            $this->gamestate->setPlayerNonMultiactive(self::getCurrentPlayerId(), '');
         } else {
             throw new feException("Zombie mode not supported at this game state: $stateName");
         }
