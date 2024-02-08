@@ -101,12 +101,7 @@ class SevenKnightsBewitched extends Table
         $mode = (int)self::getGameStateValue(GameOption::MODE);
         $coop = (int)self::getGameStateValue(GameOption::COOP);
 
-        $tilesPerPlayer = 1;
-        if ($mode === GameMode::DARKNESS) {
-            $additionalCharacters = $coop ? 7 - count($players) : 3;
-        } else {
-            $additionalCharacters = count($players) < 6 ? 1 : 0;
-        }
+        $additionalCharacters = $this->extraCharactersCount(count($players));
 
         switch ($mode) {
             case GameMode::STANDARD:
@@ -138,19 +133,17 @@ class SevenKnightsBewitched extends Table
         $values = [];
 
         foreach ($players as $playerId => $_) {
-            for ($tile = 0; $tile < $tilesPerPlayer; ++$tile) {
-                $character = array_shift($characters);
-                $values[] = "($tileIndex, $playerId, $character)";
+            $character = array_shift($characters);
+            $values[] = "($tileIndex, $playerId, $character)";
 
-                self::notifyPlayer($playerId, 'reveal', clienttranslate('You are ${numberIcon}'), [
-                    'tileId' => $tileIndex,
-                    'character' => $character,
-                    'numberIcon' => $character === 0 ? $character : (1 << ($character - 1)),
-                    'preserve' => ['numberIcon']
-                ]);
+            self::notifyPlayer($playerId, 'reveal', clienttranslate('You are ${numberIcon}'), [
+                'tileId' => $tileIndex,
+                'character' => $character,
+                'numberIcon' => $character === 0 ? $character : (1 << ($character - 1)),
+                'preserve' => ['numberIcon']
+            ]);
 
-                ++$tileIndex;
-            }
+            ++$tileIndex;
         }
 
         for ($i = 0; $i < $additionalCharacters; ++$i) {
@@ -232,6 +225,28 @@ class SevenKnightsBewitched extends Table
         ]);
     }
 
+    function extraCharactersCount(int $playerCount): int
+    {
+        $mode = (int)self::getGameStateValue(GameOption::MODE);
+        $coop = (int)self::getGameStateValue(GameOption::COOP);
+
+        if ($mode === GameMode::DARKNESS) {
+            return $coop ? 7 - $playerCount : 3;
+        } else {
+            return $playerCount < 6 ? 1 : 0;
+        }
+    }
+
+    function isDeploymentReady(): bool
+    {
+        $optionalTiles = 1 - (int)self::getGameStateValue(GameOption::COOP);
+
+        return (int)self::getUniqueValueFromDb(<<<EOF
+            SELECT BIT_COUNT(SUM(1 << deployment)) >= (SELECT COUNT(*) FROM tile) - $optionalTiles 
+            FROM tile
+            WHERE deployment IS NOT NULL  
+            EOF) > 0;
+    }
 
     function inspect(int $tileId): void
     {
@@ -478,17 +493,23 @@ class SevenKnightsBewitched extends Table
     function deploy(int $tileId, int $position)
     {
         self::checkAction('deploy');
-        if ($position >= self::getPlayersNumber() - 1) {
-            new BgaUserException('Invalid position');
-        }
+
+        $mode = (int)self::getGameStateValue(GameOption::MODE);
+        $coop = (int)self::getGameStateValue(GameOption::COOP);
+
+        $playerCount = self::getPlayersNumber();
+        $remainingTiles = $mode === GameMode::STANDARD && $coop === 0 ? 1 : 0;
+        $positionsCount = $playerCount + $this->extraCharactersCount($playerCount) - $remainingTiles;
+
         self::DbQuery(<<<EOF
             UPDATE tile INNER JOIN tile AS previous ON (previous.tile_id = $tileId)
             SET tile.deployment = IF(tile.tile_id = $tileId, $position, previous.deployment)
             WHERE tile.tile_id = $tileId OR tile.deployment = $position
+                AND $position <= $positionsCount 
             EOF);
 
         if (self::DbAffectedRow() === 0) {
-            throw new BgaUserException("Occupied position");
+            throw new BgaUserException("Invalid position");
         }
 
         $owner = self::getUniqueValueFromDb(
@@ -513,9 +534,8 @@ class SevenKnightsBewitched extends Table
     function check()
     {
         self::checkAction('check');
-        $count = self::getUniqueValueFromDb(
-            'SELECT COUNT(deployment) FROM tile');
-        if ($count < self::getPlayersNumber() - 1) {
+
+        if (!$this->isDeploymentReady()) {
             throw new BgaUserException('Not enough tiles');
         }
 
@@ -648,7 +668,7 @@ class SevenKnightsBewitched extends Table
 
         self::incStat(1, Stats::APPOINTED, $captain);
 
-        self::notifyAllPlayers('reveal', clienttranslate('${tokenIcon}${player_name} is appointed as the captain and is revealed to be ${numberIcon}'), [
+        self::notifyAllPlayers('reveal', clienttranslate('${tokenIcon}${player_name} is appointed as captain and is revealed to be ${numberIcon}'), [
             'player_name' => $playerName,
             'tokenIcon' => "player,$playerName",
             'numberIcon' => $character === 0 ? $character : (1 << ($character - 1)),
@@ -843,6 +863,10 @@ class SevenKnightsBewitched extends Table
         ];
     }
 
+    function argDeployKnights(): array {
+        return ['ready' => $this->isDeploymentReady()];
+    }
+
     function zombieTurn($state, $activePlayer)
     {
         $stateName = $state['name'];
@@ -861,8 +885,14 @@ class SevenKnightsBewitched extends Table
 
     function __skipToVote()
     {
-        self::setGameStateInitialValue(Globals::ACTIONS_TAKEN, self::getPlayersNumber() * 2);
+        self::setGameStateValue(Globals::ACTIONS_TAKEN, self::getPlayersNumber() * 3);
         $this->gamestate->jumpToState(State::VOTE);
+    }
+
+    function __skipToDeploy()
+    {
+        self::setGameStateValue(Globals::CAPTAIN, self::getActivePlayerId());
+        $this->gamestate->jumpToState(State::DEPLOY_KNIGHTS);
     }
 
     function __skipRound()

@@ -145,17 +145,18 @@ define([
         this.isCoop = parseInt(data.coop);
 
         const deployment = document.getElementById("mur-deployment");
-        const unordered = this.gameMode !== GameMode.standard;
+        const sequential = this.gameMode === GameMode.standard
+            || this.gameMode === GameMode.darkness && this.isCoop;
 
         let i = 0;
         while (i < data.tiles.length + this.isCoop - 1) {
             createElement(deployment,
-                createPlaceholder(i++, unordered));
+                createPlaceholder(i++, !sequential));
         }
 
         if (this.gameMode !== GameMode.standard && !this.isCoop) {
             createElement(deployment,
-                createPlaceholder(i++, unordered, true))
+                createPlaceholder(i++, !sequential, true))
         }
 
         if (this.gameMode === GameMode.standard) {
@@ -389,7 +390,7 @@ define([
                             player.classList.add("mur-selectable");
                         }
                     }
-                    this.addActionButton("mur-vote", _("Vote"), () => {
+                    this.addActionButton("mur-vote", _("Recommend"), () => {
                         this.request("vote", {
                             playerId: this.selectedPlayer.dataset.player
                         }, () => {
@@ -404,7 +405,8 @@ define([
                         this.request("check");
                     }, null, null, "red");
 
-                    this.updateDeployment();
+                    document.getElementById("mur-check")
+                        .classList.toggle("disabled", !args.ready);
                     break;
                 }
             }
@@ -585,15 +587,6 @@ define([
         return false;
     },
 
-    updateDeployment() {
-        const button = document.getElementById("mur-check");
-        if (button) {
-            const ready = document.querySelectorAll(".mur-placeholder:not(.mur-optional):not(.mur-inactive) > .mur-tile").length ===
-                document.querySelectorAll(".mur-placeholder:not(.mur-optional):not(.mur-inactive)").length;
-            button.classList.toggle("disabled", !ready);
-        }
-    },
-
     roundCleanup() {
         const deployedTiles = document.querySelectorAll(".mur-placeholder:not(.mur-inactive) .mur-tile");
         const moves = [];
@@ -698,7 +691,6 @@ define([
                 })
             }
             this.animateTiles(moves);
-            setTimeout(() => this.updateDeployment(), 0);
         });
 
         dojo.subscribe('score', this, data => {
