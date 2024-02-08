@@ -135,8 +135,8 @@ $gameinfos = [
 // Each paragraph must be wrapped with totranslate() for translation and should not contain html (plain text without formatting).
 // A good length for this text is between 100 and 150 words (about 6 to 9 lines on a standard display)
 'presentation' => [
-    totranslate('Seven Knights Bewitched is a logic puzzle game with hidden identities. Knight order of a far western country of Stlute attempts to deploy in an orderly formation while being  hindered by spells of Witch Murmamius.'),
-    totranslate('Each round players are randomly divided into Knights and Witch teams. The Knights team scores points by correctly  guessing the deployment order of each Knight, while the Witch team scores points by preventing that. Standard game is played in 3 rounds after which all players with the most earned points share the victory.'),
+    totranslate('Seven Knights Bewitched is a logic puzzle game with hidden identities. Knight order of a far western country of Stlute attempts to deploy in an orderly formation while being hindered by spells of Witch Myrmamius.'),
+    totranslate('Each round players are randomly divided into Knights and Witch teams. The Knights team scores points by correctly guessing the deployment order of each Knight, while the Witch team scores points by preventing that. Standard game is played in 3 rounds after which all players with the most earned points share the victory.'),
     totranslate('No discussion takes place between players, the only allowed form of communication is asking a limited number of yes/no questions about each other\'s identity.')
 ],
 

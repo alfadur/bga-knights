@@ -60,6 +60,14 @@ class SevenKnightsBewitched extends Table
         self::reattributeColorsBasedOnPreferences($players, $data['player_colors']);
         self::reloadPlayersBasicInfos();
 
+        foreach (Stats::TABLE_STATS_LIST as $stat) {
+            self::initStat('table', $stat, 0);
+        }
+
+        foreach (Stats::PLAYER_STATS_LIST as $stat) {
+            self::initStat('player', $stat, 0);
+        }
+
         self::setupPlayers(self::loadPlayersBasicInfos(), $data['player_colors']);
         self::setupTiles();
 
@@ -278,6 +286,10 @@ class SevenKnightsBewitched extends Table
             'preserve' => ['tokenIcon1', 'tokenIcon2']
         ]);
 
+        if ($character === 0) {
+            self::incStat(1, Stats::BEWITCHED, $activePlayerId);
+        }
+
         $message = $character === 0 ?
             clienttranslate('${tokenIcon}${player_name} turns out to be ${numberIcon}. You are now bewitched!') :
             clienttranslate('${tokenIcon}${player_name} turns out to be ${numberIcon}');
@@ -289,6 +301,8 @@ class SevenKnightsBewitched extends Table
             'numberIcon' => $character === 0 ? $character : (1 << ($character - 1)),
             'preserve' => ['numberIcon', 'tokenIcon']
         ]);
+
+        self::giveExtraTime($activePlayerId);
 
         self::incGamestateValue(Globals::ACTIONS_TAKEN, 1);
         $this->gamestate->nextState('');
@@ -384,6 +398,8 @@ class SevenKnightsBewitched extends Table
             $args['preserve'][] = 'tokenIcon3';
         }
 
+        self::giveExtraTime($activePlayerId);
+
         self::notifyAllPlayers('question', $message, $args);
 
         $this->gamestate->nextState('');
@@ -394,9 +410,17 @@ class SevenKnightsBewitched extends Table
         self::checkAction('answer');
         $answer = $answer ? 1 : 0;
         $expectedAnswer = (int)self::getGameStateValue(Globals::ANSWER);
-        if ($expectedAnswer > 0 && $expectedAnswer - 1 !== $answer) {
+        $isTruth = $expectedAnswer === $answer + 1;
+
+        if ($expectedAnswer > 0 && !$isTruth) {
             throw new BgaUserException('Invalid answer');
         }
+
+        $answerStat = $isTruth ? Stats::TRUTHS_TOLD : Stats::LIES_TOLD;
+        $activePlayerId = self::getActivePlayerId();
+        self::incStat(1, $answerStat, $activePlayerId);
+        self::giveExtraTime($activePlayerId);
+
         $this->recordAnswer(self::getActivePlayerName(), $answer);
         $this->gamestate->nextState('');
     }
@@ -428,6 +452,8 @@ class SevenKnightsBewitched extends Table
         if (self::DbAffectedRow() === 0) {
             throw new BgaUserException('Invalid vote');
         }
+
+        self::giveExtraTime($currentPlayerId);
 
         $this->gamestate->setPlayerNonMultiactive($currentPlayerId, '');
     }
@@ -499,6 +525,8 @@ class SevenKnightsBewitched extends Table
             'tokenIcon' => "player,$playerName"
         ]);
 
+        self::giveExtraTime(self::getCurrentPlayerId());
+
         $this->gamestate->nextState('check');
     }
 
@@ -531,8 +559,6 @@ class SevenKnightsBewitched extends Table
                         AND inspection.player_id = player_status.player_id) 
             EOF);
 
-        self::dump('winners', $winners);
-
         if (count($winners) > 0) {
             $tokens = 0;
             $conditions = [];
@@ -549,6 +575,12 @@ class SevenKnightsBewitched extends Table
                 SET player_score = player_score + $score
                 WHERE $args
                 EOF);
+
+            $winStat = $knightsWin ? Stats::KNIGHT_WINS : Stats::WITCH_WINS;
+            self::incStat(1, $winStat);
+            foreach ($players as $playerId) {
+                self::incStat(1, $winStat, $playerId);
+            }
 
             $message =  $knightsWin ?
                 clienttranslate('The Knights team wins the round! ${tokenIcons} receive(s) ${score} points') :
@@ -613,6 +645,8 @@ class SevenKnightsBewitched extends Table
         $character = (int)$votes[0]['character'];
         self::setGameStateValue(Globals::CAPTAIN, $captain);
         $playerName = self::getPlayerNameById($captain);
+
+        self::incStat(1, Stats::APPOINTED, $captain);
 
         self::notifyAllPlayers('reveal', clienttranslate('${tokenIcon}${player_name} is appointed as the captain and is revealed to be ${numberIcon}'), [
             'player_name' => $playerName,
@@ -707,10 +741,10 @@ class SevenKnightsBewitched extends Table
             EOF);
 
         $knightsWin = true;
-        self::dump("deployment order", $order);
 
         $list = [];
         $previous = 0;
+        $mistakes = 0;
         $missingTile = null;
 
         foreach ($order as $tile) {
@@ -718,6 +752,7 @@ class SevenKnightsBewitched extends Table
             if ((int)$tile['deployed']) {
                 if ($character <= $previous) {
                     $knightsWin = false;
+                    ++$mistakes;
                 } else {
                     $previous = $character;
                 }
@@ -728,6 +763,7 @@ class SevenKnightsBewitched extends Table
                 $list[] = $character;
             } else if ($character !== 0) {
                 $missingTile = $tile;
+                ++$mistakes;
                 break;
             }
         }
@@ -745,6 +781,11 @@ class SevenKnightsBewitched extends Table
                 'character' => $missingTile['character'],
                 'preserve' => ['tokenIcon', 'numberIcon'],
             ]);
+        }
+
+        if ($mistakes > 0) {
+            $captain = self::getGameStateValue(Globals::CAPTAIN);
+            self::incStat($mistakes, Stats::MISTAKES, $captain);
         }
 
         $this::applyScore($knightsWin);

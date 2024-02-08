@@ -64,4 +64,30 @@ interface Globals {
     const FIRST_PLAYER_ID = 15;
 }
 
+interface Stats {
+    const KNIGHT_WINS = 'knight_wins';
+    const WITCH_WINS = 'witch_wins';
+
+    const TABLE_STATS_LIST = [
+        self::KNIGHT_WINS,
+        self::WITCH_WINS
+    ];
+
+    const BEWITCHED = 'bewitched';
+    const TRUTHS_TOLD = 'truths';
+    const LIES_TOLD = 'lies';
+    const APPOINTED = 'appointed';
+    const MISTAKES = 'mistakes';
+
+    const PLAYER_STATS_LIST = [
+        self::KNIGHT_WINS,
+        self::WITCH_WINS,
+        self::BEWITCHED,
+        self::TRUTHS_TOLD,
+        self::LIES_TOLD,
+        self::APPOINTED,
+        self::MISTAKES
+    ];
+}
+
 const MAX_ROUNDS = 100;

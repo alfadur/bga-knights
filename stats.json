@@ -1,0 +1,51 @@
+{
+    "table": {
+        "knight_wins":  {
+            "id": 10,
+            "name": "Knights team wins",
+            "type": "int"
+        },
+        "witch_wins": {
+            "id": 11,
+            "name": "Witch team wins",
+            "type": "int"
+        }
+    },
+    "player": {
+        "knight_wins":  {
+            "id": 10,
+            "name": "Knights team wins",
+            "type": "int"
+        },
+        "witch_wins": {
+            "id": 11,
+            "name": "Witch team wins",
+            "type": "int"
+        },
+        "bewitched": {
+            "id": 12,
+            "name": "Witch team wins",
+            "type": "int"
+        },
+        "truths": {
+            "id": 13,
+            "name": "Number of truths told",
+            "type": "int"
+        },
+        "lies":  {
+            "id": 14,
+            "name": "Number of lies told",
+            "type": "int"
+        },
+        "appointed": {
+            "id": 15,
+            "name": "Number of times appointed as captain",
+            "type": "int"
+        },
+        "mistakes":  {
+            "id": 16,
+            "name": "Number of mistakes in deployments",
+            "type": "int"
+        }
+    }
+}
