@@ -489,7 +489,7 @@ define([
                 event.stopPropagation();
                 number.classList.toggle("mur-selected");
                 const selectionSize = document.querySelectorAll(".mur-single-number.mur-selected").length;
-                askButton.classList.toggle("disabled", selectionSize % 7 === 0);
+                askButton.classList.toggle("disabled", selectionSize % numbersCount === 0);
             });
         }
     },
