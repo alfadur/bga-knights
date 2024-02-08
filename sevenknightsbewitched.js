@@ -510,18 +510,18 @@ define([
                 _("${tokenIcon1}${player_name1}, is ${tokenIcon2}${player_name2}'s tile one of ${numberIcon}?"));
         const args = {
             player_name1: `<span style="color: #${recipient.color}">${recipient.name}</span>`,
-            tokenIcon1: `player@${recipient.name}`,
+            tokenIcon1: `player,${recipient.name}`,
             numberIcon: question.question
         };
 
         if (tileOwner !== recipient.id) {
             if (tileOwner === null) {
                 args.player_name2 = _("Knight-errant");
-                args.tokenIcon2 = `tile@${question.tile_id}`;
+                args.tokenIcon2 = `tile,${question.tile_id}`;
             } else {
                 const owner = this.gamedatas.players[tileOwner];
                 args.player_name2 = `<span style="color: #${owner.color}">${owner.name}</span>`;
-                args.tokenIcon2 = `player@${owner.name}`
+                args.tokenIcon2 = `player,${owner.name}`
             }
         }
 
@@ -669,12 +669,12 @@ define([
             const delay = this.revealCharacter(data.args.tileId, data.args.character) ? 1000 : 0;
             this.notifqueue.setSynchronousDuration(delay);
         });
-        this.notifqueue.setSynchronous('reveal');
+        this.notifqueue.setSynchronous("reveal");
         dojo.subscribe("question", this, data => {
             console.log(data);
         });
 
-        this.notifqueue.setSynchronous('vote', 1000);
+        this.notifqueue.setSynchronous("vote", 1000);
 
         dojo.subscribe("move", this, data => {
             const tile = document.getElementById(`mur-tile-${data.args.tileId}`);
@@ -693,7 +693,8 @@ define([
             this.animateTiles(moves);
         });
 
-        dojo.subscribe('score', this, data => {
+        dojo.subscribe("score", this, data => {
+            console.log(data);
             const score = parseInt(data.args.score);
             for (const playerId of data.args.players) {
                 this.scoreCtrl[parseInt(playerId)].incValue(score);

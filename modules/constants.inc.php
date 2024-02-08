@@ -90,4 +90,4 @@ interface Stats {
     ];
 }
 
-const MAX_ROUNDS = 100;
+const MAX_ROUNDS = 3;

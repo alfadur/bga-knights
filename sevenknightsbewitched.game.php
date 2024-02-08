@@ -602,7 +602,7 @@ class SevenKnightsBewitched extends Table
                 self::incStat(1, $winStat, $playerId);
             }
 
-            $message =  $knightsWin ?
+            $message = $knightsWin ?
                 clienttranslate('The Knights team wins the round! ${tokenIcons} receive(s) ${score} points') :
                 clienttranslate('The Witch team wins the round! ${tokenIcons} receive(s) ${score} points');
 
