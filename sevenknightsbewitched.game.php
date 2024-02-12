@@ -563,7 +563,7 @@ class SevenKnightsBewitched extends Table
             EOF);
     }
 
-    function applyScore($knightsWin): void
+    function applyScore(bool $knightsWin): void
     {
         $round = self::getGameStateValue(Globals::ROUND);
         $score = $round >= MAX_ROUNDS ? 7 : ($knightsWin ? 2 : 3);
@@ -572,9 +572,10 @@ class SevenKnightsBewitched extends Table
         $winners = self::getObjectListFromDb(<<<EOF
             SELECT player_status.player_id, player_status.token 
                  FROM player_status 
-                    INNER JOIN tile ON (tile.`character` = 0)
+                    LEFT JOIN tile ON (tile.`character` = 0)
                     LEFT JOIN inspection ON (inspection.tile_id = tile.tile_id)                    
-                 WHERE $check (tile.player_id = player_status.player_id 
+                 WHERE $check (tile.player_id IS NOT NULL
+                        AND tile.player_id = player_status.player_id 
                     OR inspection.player_id IS NOT NULL 
                         AND inspection.player_id = player_status.player_id) 
             EOF);
@@ -760,19 +761,16 @@ class SevenKnightsBewitched extends Table
             ORDER BY -deployment DESC
             EOF);
 
-        $knightsWin = true;
-
         $list = [];
         $previous = 0;
-        $mistakes = 0;
+        $mistakeCount = 0;
         $missingTile = null;
 
         foreach ($order as $tile) {
             $character = (int)$tile['character'];
             if ((int)$tile['deployed']) {
                 if ($character <= $previous) {
-                    $knightsWin = false;
-                    ++$mistakes;
+                    ++$mistakeCount;
                 } else {
                     $previous = $character;
                 }
@@ -782,8 +780,7 @@ class SevenKnightsBewitched extends Table
                 ]);
                 $list[] = $character;
             } else if ($character !== 0) {
-                $missingTile = $tile;
-                ++$mistakes;
+                ++$mistakeCount;
                 break;
             }
         }
@@ -793,7 +790,7 @@ class SevenKnightsBewitched extends Table
         ]);
 
         if ($missingTile !== null) {
-            self::notifyAllPlayers("reveal", clienttranslate('${tokenIcon}${player_name}\'s tile ${numberIcon} has not been included'), [
+            self::notifyAllPlayers('reveal', clienttranslate('${tokenIcon}${player_name}\'s tile ${numberIcon} has not been included'), [
                 'player_name' => self::getPlayerNameById($missingTile['player_id']),
                 'tokenIcon' => "tile,$missingTile[tile_id]",
                 'numberIcon' => 1 << ((int)$missingTile['character'] - 1),
@@ -803,12 +800,12 @@ class SevenKnightsBewitched extends Table
             ]);
         }
 
-        if ($mistakes > 0) {
+        if ($mistakeCount > 0) {
             $captain = self::getGameStateValue(Globals::CAPTAIN);
-            self::incStat($mistakes, Stats::MISTAKES, $captain);
+            self::incStat($mistakeCount, Stats::MISTAKES, $captain);
         }
 
-        $this::applyScore($knightsWin);
+        $this::applyScore($mistakeCount === 0);
 
         $this->gamestate->nextState('');
     }
