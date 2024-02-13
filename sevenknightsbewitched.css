@@ -252,8 +252,8 @@
     --y: 0px;
 
     position: relative;
-    z-index: 1;
-    animation-name: arrow-follow-path;
+    z-index: 2;
+    animation-name: follow-path;
     animation-duration: 800ms;
     animation-timing-function: ease-in-out;
 }
@@ -269,7 +269,7 @@
     transform: translate(var(--x), var(--y));
 }
 
-@keyframes arrow-follow-path {
+@keyframes follow-path {
     0% {
         opacity: 0;
     }
@@ -278,6 +278,28 @@
     }
     100% {
         transform: none;
+    }
+}
+
+.mur-arrow.mur-animated-back, .mur-token.mur-animated-back {
+    --x: 0px;
+    --y: 0px;
+
+    position: relative;
+    z-index: 2;
+    animation-name: follow-path-back;
+    animation-duration: 800ms;
+    animation-timing-function: ease-in-out;
+    transform: none;
+}
+
+@keyframes follow-path-back {
+    80% {
+        opacity: 1;
+    }
+    100% {
+        opacity: 0;
+        transform: translate(var(--x), var(--y));
     }
 }
 

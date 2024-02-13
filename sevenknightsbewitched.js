@@ -110,13 +110,13 @@ function createPlaceholder(index, unordered, optional, inactive) {
 function createArrow(token) {
     token = parseInt(token);
     const style = `--sprite-x: ${token % 4}; --sprite-y: ${Math.floor(token / 4)}`;
-    return `<div class="mur-arrow" style="${style}"></div>`;
+    return `<div class="mur-arrow" style="${style}" data-token="${token}"></div>`;
 }
 
 function createToken(token) {
     token = parseInt(token);
     const style = `--token-x: ${token % 4}; --token-y: ${Math.floor(token / 4)}`;
-    return `<div class="mur-icon mur-token" style="${style}"></div>`;
+    return `<div class="mur-icon mur-token" style="${style}" data-token="${token}"></div>`;
 }
 
 function createQuestionDialog(numberCount) {
@@ -353,6 +353,14 @@ define([
                 }
             }
         }
+
+        if (stateName === "appointCaptain") {
+            for (const token of document.querySelectorAll(".mur-token-container .mur-token")) {
+                this.animatePlayerRemove(
+                    this.tokenTiles[parseInt(token.dataset.token)].player_id,
+                    token);
+            }
+        }
     },
 
     onUpdateActionButtons(stateName, args) {
@@ -568,6 +576,26 @@ define([
         this.animatePlayerPlace(playerId, arrow);
     },
 
+    animatePlayerRemove(ownerId, item) {
+        const destination = document.getElementById(`player_board_${ownerId}`);
+
+        const from = getElementCenter(item);
+        const to = getElementCenter(destination);
+        const dX = to.x - from.x;
+        const dY = to.y - from.y;
+
+        item.style.setProperty("--x", `${dX}px`);
+        item.style.setProperty("--y", `${dY}px`);
+        item.classList.add("mur-animated-back");
+
+        item.addEventListener("animationend", () => {
+            item.classList.remove("mur-animated-back");
+            item.parentElement.removeChild(item);
+        }, {
+            once: true
+        });
+    },
+
     animateTiles(moves) {
         for (const move of moves) {
             const from = getElementCenter(move.tile);
@@ -625,7 +653,9 @@ define([
         }, 0);
 
         for (const arrow of document.querySelectorAll(".mur-arrow")) {
-            arrow.parentElement.removeChild(arrow);
+            this.animatePlayerRemove(
+                this.tokenTiles[parseInt(arrow.dataset.token)].player_id,
+                arrow);
         }
     },
 
@@ -725,6 +755,8 @@ define([
             this.animateTiles(moves);
         });
 
+        this.notifqueue.setSynchronous("order", 1000);
+
         dojo.subscribe("score", this, data => {
             console.log(data);
             const score = parseInt(data.args.score);
@@ -732,6 +764,9 @@ define([
                 this.scoreCtrl[parseInt(playerId)].incValue(score);
             }
         });
+
+        this.notifqueue.setSynchronous("score", 1000);
+
     },
 
     formatList(...numbers) {

@@ -787,7 +787,7 @@ class SevenKnightsBewitched extends Table
             }
         }
 
-        self::notifyAllPlayers('message', clienttranslate('Revealed order is ${listIcon}'), [
+        self::notifyAllPlayers('order', clienttranslate('Revealed order is ${listIcon}'), [
             'listIcon' => implode(',', $list)
         ]);
 
