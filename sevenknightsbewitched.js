@@ -107,9 +107,10 @@ function createPlaceholder(index, unordered, optional, inactive) {
     return `<div id="mur-placeholder-${index + 1}" class="${classes.join(" ")}" data-number="${index + 1}"></div>`
 }
 
-function createArrow(token) {
+function createArrow(token, index) {
     token = parseInt(token);
-    const style = `--sprite-x: ${token % 4}; --sprite-y: ${Math.floor(token / 4)}`;
+    const style = `
+        --sprite-x: ${token % 4}; --sprite-y: ${Math.floor(token / 4)}; z-index: ${7 - index}`;
     return `<div class="mur-arrow" style="${style}" data-token="${token}"></div>`;
 }
 
@@ -272,7 +273,8 @@ define([
 
         for (const inspection of data.inspections) {
             const place = document.getElementById(`mur-tile-arrows-${inspection.tile_id}`);
-            createElement(place, createArrow(data.players[inspection.player_id].token), 0);
+            createElement(place,
+                createArrow(data.players[inspection.player_id].token, place.childElementCount));
         }
 
         this.setupNotifications();
@@ -572,7 +574,8 @@ define([
 
     animateArrow(playerId, tileId) {
         const place = document.getElementById(`mur-tile-arrows-${tileId}`);
-        const arrow = createElement(place, createArrow(this.gamedatas.players[playerId].token), 0);
+        const arrow = createElement(place,
+            createArrow(this.gamedatas.players[playerId].token, place.childElementCount));
         this.animatePlayerPlace(playerId, arrow);
     },
 
@@ -590,7 +593,9 @@ define([
 
         item.addEventListener("animationend", () => {
             item.classList.remove("mur-animated-back");
-            item.parentElement.removeChild(item);
+            if (item.parentElement) {
+                item.parentElement.removeChild(item);
+            }
         }, {
             once: true
         });
