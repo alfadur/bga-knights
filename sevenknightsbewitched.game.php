@@ -690,11 +690,13 @@ class SevenKnightsBewitched extends Table
                         FROM player NATURAL JOIN tile 
                         WHERE tile.`character` = 0
                         EOF);
+                $witchName ??= 'Knight-Errant';
+
                 self::notifyAllPlayers('reveal', clienttranslate('${tokenIcon1}${player_name1} is bewitched by ${tokenIcon2}${player_name2}!'), [
                     'player_name1' => $playerName,
                     'player_name2' => $witchName,
                     'tokenIcon1' => "player,$playerName",
-                    'tokenIcon2' => "player,$witchName",
+                    'tokenIcon2' => "tile,$tileId",
                     'tileId' => $tileId,
                     'character' => $tileId,
                     'preserve' => ['tokenIcon1', 'tokenIcon2']
