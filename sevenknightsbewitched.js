@@ -113,6 +113,12 @@ function createArrow(token) {
     return `<div class="mur-arrow" style="${style}"></div>`;
 }
 
+function createToken(token) {
+    token = parseInt(token);
+    const style = `--token-x: ${token % 4}; --token-y: ${Math.floor(token / 4)}`;
+    return `<div class="mur-icon mur-token" style="${style}"></div>`;
+}
+
 function createQuestionDialog(numberCount) {
     const questionText = _("Is the tile number one of...");
     const numbers = [1, 2, 3, 4, 5, 6, 7].slice(0, numberCount).map(n =>
@@ -209,6 +215,7 @@ define([
             }
 
             createElement(playerArea, `<div class="mur-tile-container"></div>`);
+            createElement(playerArea, `<div class="mur-token-container"></div>`);
         }
 
         for (const playerId of playerIds) {
@@ -530,23 +537,35 @@ define([
             `<div id="mur-question-bubble" class="discussion_bubble">${text}</div>`);
     },
 
-    animateArrow(playerId, tileId) {
-        const source = document.getElementById(`player_board_${playerId}`);
-        const place = document.getElementById(`mur-tile-arrows-${tileId}`);
-        const arrow = createElement(place, createArrow(this.gamedatas.players[playerId].token), 0);
+    animatePlayerPlace(ownerId, item) {
+        const source = document.getElementById(`player_board_${ownerId}`);
 
         const from = getElementCenter(source);
-        const to = getElementCenter(arrow);
+        const to = getElementCenter(item);
         const dX = from.x - to.x;
         const dY = from.y - to.y;
 
-        arrow.style.setProperty("--x", `${dX}px`);
-        arrow.style.setProperty("--y", `${dY}px`);
-        arrow.classList.add("mur-animated");
+        item.style.setProperty("--x", `${dX}px`);
+        item.style.setProperty("--y", `${dY}px`);
+        item.classList.add("mur-animated");
 
-        arrow.addEventListener("animationend",
-            () => arrow.classList.remove("mur-animated"),
+        item.addEventListener("animationend",
+            () => item.classList.remove("mur-animated"),
             {once: true});
+    },
+
+    animateTokens(playerId, tokens) {
+        for (const token of tokens) {
+            const ownerId = this.tokenTiles[token].player_id;
+            const place = document.querySelector(`#mur-player-${playerId} .mur-token-container`);
+            this.animatePlayerPlace(ownerId, createElement(place, createToken(token)));
+        }
+    },
+
+    animateArrow(playerId, tileId) {
+        const place = document.getElementById(`mur-tile-arrows-${tileId}`);
+        const arrow = createElement(place, createArrow(this.gamedatas.players[playerId].token), 0);
+        this.animatePlayerPlace(playerId, arrow);
     },
 
     animateTiles(moves) {
@@ -674,6 +693,19 @@ define([
             console.log(data);
         });
 
+        dojo.subscribe("vote", this, data => {
+            console.log(data);
+            const tokens = [];
+            let voters = parseInt(data.args.voters);
+
+            while (voters !== 0) {
+                const token = 31 - Math.clz32(voters);
+                tokens.push(token);
+                voters &= ~(1 << token);
+            }
+
+            this.animateTokens(data.args.playerId, tokens);
+        });
         this.notifqueue.setSynchronous("vote", 1000);
 
         dojo.subscribe("move", this, data => {
@@ -726,12 +758,6 @@ define([
     },
 
     formatTokens(type, content) {
-        function createToken(token) {
-            token = parseInt(token);
-            const style = `--token-x: ${token % 4}; --token-y: ${Math.floor(token / 4)}`;
-            return `<div class="mur-icon mur-token" style="${style}"></div>`;
-        }
-
         switch (type) {
             case "player": {
                 const players =

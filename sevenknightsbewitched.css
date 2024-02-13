@@ -247,18 +247,26 @@
     pointer-events: none;
 }
 
-.mur-arrow.mur-animated {
+.mur-arrow.mur-animated, .mur-token.mur-animated {
     --x: 0px;
     --y: 0px;
-    --angle: 0deg;
 
     position: relative;
     z-index: 1;
-    margin-top: 50px;
     animation-name: arrow-follow-path;
     animation-duration: 800ms;
     animation-timing-function: ease-in-out;
+}
+
+.mur-arrow.mur-animated {
+    --angle: 0deg;
+
+    margin-top: 50px;
     transform: translate(var(--x), var(--y)) rotate(-90deg);
+}
+
+.mur-token.mur-animated {
+    transform: translate(var(--x), var(--y));
 }
 
 @keyframes arrow-follow-path {
@@ -432,8 +440,47 @@
     font-size: 20px;
 }
 
+.mur-token-container {
+    --token-size: 18px;
+
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    margin: auto;
+    width: var(--token-size);
+    height: var(--token-size);
+    pointer-events: none;
+}
+
 .mur-token {
     --token-size: 18px;
+}
+
+.mur-token-container .mur-token {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    margin: auto;
+}
+
+.mur-token-container .mur-token:nth-child(2n) {
+    margin-left: calc(var(--token-size) *  -1.1);
+}
+
+.mur-token-container .mur-token:nth-child(4n + 2) {
+    margin-left: calc(var(--token-size) * 1.2);
+}
+
+.mur-token-container .mur-token:nth-child(3n) {
+    margin-top: calc(var(--token-size) * -1.6);
+}
+
+.mur-token-container .mur-token:nth-child(3n + 1) {
+    margin-top: calc(var(--token-size) * 1.7);
 }
 
 .mur-witch {

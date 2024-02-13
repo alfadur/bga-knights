@@ -655,6 +655,8 @@ class SevenKnightsBewitched extends Table
             $playerName = self::getPlayerNameById($player_id);
             self::notifyAllPlayers('vote', clienttranslate('${tokenIcon}${player_name} is recommended by ${tokenIcons}'), [
                 'player_name' => $playerName,
+                'playerId' => $player_id,
+                'voters' => $voters,
                 'tokenIcon' => "player,$playerName",
                 'tokenIcons' => "bitset,$voters",
                 'preserve' => ['tokenIcon', 'tokenIcons']
@@ -890,6 +892,7 @@ class SevenKnightsBewitched extends Table
     function __skipToVote()
     {
         self::setGameStateValue(Globals::ACTIONS_TAKEN, self::getPlayersNumber() * 3);
+        self::DbQuery("UPDATE player_status SET voted = NULL");
         $this->gamestate->jumpToState(State::VOTE);
     }
 
