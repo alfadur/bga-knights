@@ -191,7 +191,8 @@ define([
 
         const playArea = document.getElementById("mur-play-area");
 
-        const currentIndex = parseInt(players[this.getCurrentPlayerId().toString()].no) - 1
+        const currentIndex = this.isSpectator ? 0 :
+            parseInt(players[this.getCurrentPlayerId().toString()].no) - 1;
 
         function sortKey(player) {
             return (parseInt(player.no) - 1 - currentIndex + playerCount) % playerCount;
@@ -307,10 +308,6 @@ define([
                     }
                     break;
                 }
-                case "answer": {
-                    this.displayQuestion(args.args.question);
-                    break;
-                }
                 case "deployKnights": {
                     for (const tile of document.querySelectorAll(".mur-tile:not(.mur-leftover)")) {
                         tile.classList.add("mur-selectable");
@@ -325,6 +322,13 @@ define([
                     }
                     break;
                 }
+            }
+        }
+
+        switch (stateName) {
+            case "answer": {
+                this.displayQuestion(args.args.question);
+                break;
             }
         }
     },
@@ -348,19 +352,23 @@ define([
                     clearTag("mur-selectable");
                     break;
                 }
-                case "answer": {
-                    let bubble = document.getElementById("mur-question-bubble");
-                    bubble.parentElement.removeChild(bubble);
-                    break;
-                }
+
             }
         }
 
-        if (stateName === "appointCaptain") {
-            for (const token of document.querySelectorAll(".mur-token-container .mur-token")) {
-                this.animatePlayerRemove(
-                    this.tokenTiles[parseInt(token.dataset.token)].player_id,
-                    token);
+        switch (stateName) {
+            case "answer": {
+                let bubble = document.getElementById("mur-question-bubble");
+                bubble.parentElement.removeChild(bubble);
+                break;
+            }
+            case "appointCaptain": {
+                for (const token of document.querySelectorAll(".mur-token-container .mur-token")) {
+                    this.animatePlayerRemove(
+                        this.tokenTiles[parseInt(token.dataset.token)].player_id,
+                        token);
+                }
+                break;
             }
         }
     },
