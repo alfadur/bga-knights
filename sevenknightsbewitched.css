@@ -19,6 +19,7 @@
     --tile-width: 50px;
     --tile-height: 120px;
     --tile-depth: 5px;
+    --player-size: 200px;
 
     position: relative;
     width: var(--play-width);
@@ -29,7 +30,6 @@
 .mur-player {
     --cx: 0;
     --cy: 0;
-    --player-size: 200px;
     position: absolute;
     width: var(--player-size);
     height: var(--player-size);
@@ -438,10 +438,53 @@
     flex-flow: row-reverse nowrap;
 }
 
-.mur-player #mur-question-bubble {
+.mur-bubble {
+    --cx: 0;
+    --cy: 0;
+    --bubble-width: 250px;
+
     display: block;
-    width: 250px;
+    width: var(--bubble-width);
+    position: absolute;
+    z-index: 1054;
+
+    left: calc(50% - var(--bubble-width) / 2 - 30% * var(--cx) / 2);
+    top: calc(50% - 30% * var(--cy) / 2);
+}
+
+.mur-bubble-border {
+    position: absolute;
+    width: calc(100% + 30px);
+    height: 100%;
+    border-radius: 10px;
+    outline: 2px solid black;
+}
+
+.mur-bubble-content {
+    position: relative;
+    width: 100%;
+    padding: 5px 15px;
+    background: white;
+    border-radius: 10px;
+    color: black;
+    font-weight: 400;
     text-align: center;
+}
+
+.mur-bubble svg {
+    --size: 70px;
+
+    position: absolute;
+    left: calc(var(--size) * -1);
+    top: calc(var(--size) * -1);
+    width: calc(100% + 30px + var(--size) * 2);
+    height: calc(100% + var(--size) * 2);
+}
+
+.mur-bubble path {
+    stroke-width: 2px;
+    stroke: black;
+    fill: white;
 }
 
 .mur-icon {

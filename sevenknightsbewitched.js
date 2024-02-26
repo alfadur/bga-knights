@@ -363,7 +363,7 @@ define([
 
         switch (stateName) {
             case "answer": {
-                let bubble = document.getElementById("mur-question-bubble");
+                let bubble = document.querySelector(".mur-bubble");
                 bubble.parentElement.removeChild(bubble);
                 break;
             }
@@ -519,10 +519,33 @@ define([
         }
     },
 
-    displayQuestion(question) {
+    addBubble(player, content, timeout) {
+        const cos = parseFloat(player.style.getPropertyValue("--cx"));
+        const sin = parseFloat(player.style.getPropertyValue("--cy"));
+        const style = `--cx: ${cos}; --cy: ${sin}`;
+        const bubble = createElement(document.getElementById("mur-play-area"),
+            `<div class="mur-bubble" style="${style}">
+                <div class="mur-bubble-border"></div>
+                <svg xmlns="http://www.w3.org/2000/svg"><path></path></svg>
+                <div class="mur-bubble-content">${content}</div>
+            </div>`);
+
+        const svg = bubble.querySelector("svg");
+        const {width, height} = svg.getBoundingClientRect();
+        const cx = width - (cos + 1) * width / 2;
+        const cy = height - (sin + 1) * height / 2;
+        const size = 15;
+        const path = `M${cx},${cy} L${width / 2 + sin * size},${height / 2 - cos * size} L${width / 2 - sin * size},${height / 2 + cos * size} Z`;
+        svg.firstElementChild.setAttribute("d", path);
+        if (timeout !== undefined) {
+            setTimeout(() => bubble.parentElement.removeChild(bubble), timeout);
+        }
+    },
+
+    displayQuestion(question, timeout) {
         const player = document.getElementById(`mur-player-${question.player_id}`);
         const recipient = this.gamedatas.players[question.recipient_id];
-        const tileOwner = this.gamedatas.tiles.filter(tile => tile.id === question.tile_id)[0].player_id;
+        const tileOwner = this.gamedatas.tiles.filter(tile => tile.id === question.tile_id.toString())[0].player_id;
         const bitset = parseInt(question.question);
         const isSingleNumber = (bitset & bitset - 1) === 0;
 
@@ -550,9 +573,7 @@ define([
             }
         }
 
-        const text = this.format_string_recursive(message, args);
-        createElement(player,
-            `<div id="mur-question-bubble" class="discussion_bubble">${text}</div>`);
+        this.addBubble(player, this.format_string_recursive(message, args), timeout);
     },
 
     animatePlayerPlace(ownerId, item) {
@@ -732,9 +753,23 @@ define([
             this.notifqueue.setSynchronousDuration(delay);
         });
         this.notifqueue.setSynchronous("reveal");
+
         dojo.subscribe("question", this, data => {
             console.log(data);
+            if (this.isCoop) {
+                this.displayQuestion(data.args.question, 3000);
+            }
         });
+        if (this.isCoop) {
+            this.notifqueue.setSynchronous("question", 2000);
+        }
+
+        dojo.subscribe("answer", this, data => {
+            const text = data.args.answer ? _("Yes") : _("No");
+            const player = document.getElementById(`mur-player-${data.args.playerId}`);
+            this.addBubble(player, text, 2000);
+        });
+        this.notifqueue.setSynchronous("answer", 1000);
 
         dojo.subscribe("vote", this, data => {
             console.log(data);

@@ -110,6 +110,7 @@ $machinestates = [
     State::DISPATCH_ACTION => [
         Fsm::NAME => 'dispatch',
         Fsm::TYPE => FsmType::GAME,
+        Fsm::PROGRESSION => true,
         Fsm::DESCRIPTION => '',
         Fsm::ACTION => 'stDispatch',
         Fsm::TRANSITIONS => [

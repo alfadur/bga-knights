@@ -161,7 +161,12 @@ class SevenKnightsBewitched extends Table
 
     function getGameProgression()
     {
-        return 0;
+        $round = (int)self::getGameStateValue(Globals::ROUND);
+        $mode = (int)self::getGameStateValue(GameOption::MODE);
+        $inspectsPerPlayer = $mode === GameMode::DARKNESS ? 2 : 1;
+        $playersCount = (int)$this->getPlayersNumber();
+        $actionsTaken = (int)self::getGameStateValue(Globals::ACTIONS_TAKEN);
+        return 33.3 * ($round - 1) + 33.3 * ($actionsTaken) / (1 + ($inspectsPerPlayer + 1) * $playersCount);
     }
 
     function getTiles(int $currentPlayerId): array {
@@ -205,7 +210,7 @@ class SevenKnightsBewitched extends Table
         ];
     }
 
-    function recordAnswer(string $playerName, int $answer): void
+    function recordAnswer(int $playerId, int $answer): void
     {
         self::DbQuery(<<<EOF
             UPDATE question
@@ -217,8 +222,10 @@ class SevenKnightsBewitched extends Table
             clienttranslate('${tokenIcon}${player_name} answers "Yes"') :
             clienttranslate('${tokenIcon}${player_name} answers "No"');
 
+        $playerName = self::getPlayerNameById($playerId);
         self::notifyAllPlayers('answer', $message, [
             'player_name' => $playerName,
+            'playerId' => $playerId,
             'answer' => $answer,
             'tokenIcon' => "player,$playerName",
             'preserve' => ['tokenIcon']
@@ -415,6 +422,15 @@ class SevenKnightsBewitched extends Table
 
         self::giveExtraTime($activePlayerId);
 
+        $coop = (int)self::getGameStateValue(GameOption::COOP);
+        if ($coop) {
+            $args['question'] = [
+                'player_id' => $activePlayerId,
+                'recipient_id' => $playerId,
+                'tile_id' => $tileId,
+                'question' => $valuesMask
+            ];
+        }
         self::notifyAllPlayers('question', $message, $args);
 
         $this->gamestate->nextState('');
@@ -436,7 +452,7 @@ class SevenKnightsBewitched extends Table
         self::incStat(1, $answerStat, $activePlayerId);
         self::giveExtraTime($activePlayerId);
 
-        $this->recordAnswer(self::getActivePlayerName(), $answer);
+        $this->recordAnswer($activePlayerId, $answer);
         $this->gamestate->nextState('');
     }
 
@@ -730,7 +746,7 @@ class SevenKnightsBewitched extends Table
                 $coop = (int)self::getGameStateValue(GameOption::COOP);
 
                 if ($coop) {
-                    $this->recordAnswer(self::getPlayerNameById($asked), $answer & 0b1);
+                    $this->recordAnswer($asked, $answer & 0b1);
                 } else {
                     self::setGameStateValue(Globals::ANSWER, $answer);
                     $this->gamestate->changeActivePlayer($asked);
