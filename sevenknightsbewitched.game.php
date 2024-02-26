@@ -170,12 +170,10 @@ class SevenKnightsBewitched extends Table
     }
 
     function getTiles(int $currentPlayerId): array {
-        $captain = self::getGameStateValue(Globals::CAPTAIN);
         return self::getObjectListFromDb(<<<EOF
             SELECT tile.player_id, tile.tile_id AS id, 
                (CASE WHEN tile.player_id = $currentPlayerId
                     OR inspection.tile_id IS NOT NULL
-                    OR tile.player_id = $captain
                 THEN tile.`character` END) AS `character`,
                 tile.deployment
             FROM tile LEFT JOIN inspection
