@@ -42,7 +42,7 @@ function getElementCenter(element) {
 
 function createPlayer(index, angle, player) {
     const radians = angle / 180 * Math.PI;
-    const coords = [Math.cos(radians), -Math.sin(radians)];
+    const coords = [-Math.cos(radians), -Math.sin(radians)];
     const style = `--index: ${index}; --cx: ${coords[0]}; --cy: ${coords[1]}`;
 
     const id = player ? player.id : "none";
