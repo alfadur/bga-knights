@@ -41,9 +41,14 @@ function getElementCenter(element) {
 }
 
 function createPlayer(index, angle, player) {
-    const radians = angle / 180 * Math.PI;
-    const coords = [-Math.cos(radians), -Math.sin(radians)];
-    const style = `--index: ${index}; --cx: ${coords[0]}; --cy: ${coords[1]}`;
+    let style;
+    if (angle !== null) {
+        const radians = angle / 180 * Math.PI;
+        const coords = [-Math.cos(radians), -Math.sin(radians)];
+        style = `--index: ${index}; --cx: ${coords[0]}; --cy: ${coords[1]}`;
+    } else {
+        style = `--cx: -0.75; --cy: -0.75`;
+    }
 
     const id = player ? player.id : "none";
     const token = player ? player.token : "none";
@@ -201,12 +206,11 @@ define([
         const extraTiles = data.tiles.filter(tile =>
             tile.player_id === null);
 
-        const areaCount = extraTiles.length ? playerCount + 1 : playerCount;
+        const areaCount = extraTiles.length === 1 ? playerCount + 1 : playerCount;
 
         function createPlayerArea(player, index) {
-            const angle = 90 + index * 360 / areaCount;
-            const playerArea = createElement(playArea,
-                createPlayer(index, angle, player));
+            const angle = index !== null ? 90 + index * 360 / areaCount : null;
+            const playerArea = createElement(playArea, createPlayer(index, angle, player));
 
             if (player) {
                 playerArea.addEventListener("click", event => {
@@ -228,7 +232,8 @@ define([
         }
 
         if (extraTiles.length) {
-            createPlayerArea.call(this, null, areaCount - 1);
+            const index = extraTiles.length === 1 ? areaCount - 1 : null
+            createPlayerArea.call(this, null, index);
         }
 
         for (const tile of data.tiles) {
