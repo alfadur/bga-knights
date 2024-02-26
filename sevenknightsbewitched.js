@@ -402,16 +402,19 @@ define([
                 case "answer": {
                     const that = this;
                     const answer = parseInt(args._private.answer);
+                    const canChoose = (answer & 0b10) !== 0
 
-                    function answerButton(id, label, answer, disable) {
+                    function answerButton(id, label, answer, isFalse) {
                         that.addActionButton(id, label, () => {
                             that.request("answer", {answer});
-                        });
-                        document.getElementById(id).classList.toggle("disabled", disable);
+                        }, null, null, isFalse && canChoose ? "red" : "blue");
+                        if (!canChoose) {
+                            document.getElementById(id).classList.toggle("disabled", isFalse);
+                        }
                     }
 
-                    answerButton("mur-answer-yes", _("Yes"), true, answer === 1);
-                    answerButton("mur-answer-no", _("No"), false, answer === 2);
+                    answerButton("mur-answer-yes", _("Yes"), true, (answer & 0b1) === 0);
+                    answerButton("mur-answer-no", _("No"), false, (answer & 0b1) === 1);
                     break;
                 }
                 case "vote": {

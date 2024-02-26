@@ -425,9 +425,9 @@ class SevenKnightsBewitched extends Table
         self::checkAction('answer');
         $answer = $answer ? 1 : 0;
         $expectedAnswer = (int)self::getGameStateValue(Globals::ANSWER);
-        $isTruth = $expectedAnswer === $answer + 1;
+        $isTruth = ($expectedAnswer & 0b1) === $answer;
 
-        if ($expectedAnswer > 0 && !$isTruth) {
+        if (($expectedAnswer & 0b10) === 0 && !$isTruth) {
             throw new BgaUserException('Invalid answer');
         }
 
@@ -620,13 +620,14 @@ class SevenKnightsBewitched extends Table
 
     function determineAnswer(string $playerId, int $tileId, int $question): int
     {
-        if (self::isWitchTeam($playerId)) {
-            return 0;
-        }
-        return (int)self::getUniqueValueFromDb(<<<EOF
+        $answer = (int)self::getUniqueValueFromDb(<<<EOF
             SELECT ((1 << `character`) & ($question << 1)) <> 0
             FROM tile WHERE tile_id = $tileId
-            EOF) + 1;
+            EOF);
+        if (self::isWitchTeam($playerId)) {
+            $answer |= 0b10;
+        }
+        return $answer;
     }
 
     function stAppoint(): void
@@ -725,7 +726,7 @@ class SevenKnightsBewitched extends Table
                 $coop = (int)self::getGameStateValue(GameOption::COOP);
 
                 if ($coop) {
-                    $this->recordAnswer(self::getPlayerNameById($asked), $answer - 1);
+                    $this->recordAnswer(self::getPlayerNameById($asked), $answer & 0b1);
                 } else {
                     self::setGameStateValue(Globals::ANSWER, $answer);
                     $this->gamestate->changeActivePlayer($asked);
