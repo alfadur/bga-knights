@@ -672,23 +672,27 @@ class SevenKnightsBewitched extends Table
 
         self::incStat(1, Stats::APPOINTED, $captain);
 
-        self::notifyAllPlayers('reveal', clienttranslate('${tokenIcon}${player_name} is appointed as captain and is revealed to be ${numberIcon}'), [
+        self::notifyAllPlayers('appoint', clienttranslate('${tokenIcon}${player_name} is appointed as captain'), [
             'player_name' => $playerName,
             'tokenIcon' => "player,$playerName",
             'numberIcon' => $character === 0 ? $character : (1 << ($character - 1)),
-            'tileId' => $tileId,
-            'character' => $character,
             'preserve' => ['tokenIcon', 'numberIcon']
         ]);
 
         $this->gamestate->changeActivePlayer($captain);
 
         if ($character === 0 || self::isWitchTeam($captain)) {
+            self::notifyAllPlayers('reveal', '', [
+                'player_name' => $playerName,
+                'tileId' => $tileId,
+                'character' => $character,
+            ]);
+
             if ($character !== 0) {
                 ['player_name' => $witchName, 'tile_id' => $tileId] =
                     self::getObjectFromDb(<<<'EOF'
                         SELECT player_name, tile_id
-                        FROM player NATURAL JOIN tile 
+                        FROM tile NATURAL LEFT JOIN player 
                         WHERE tile.`character` = 0
                         EOF);
                 $witchName ??= 'Knight-Errant';
@@ -699,7 +703,7 @@ class SevenKnightsBewitched extends Table
                     'tokenIcon1' => "player,$playerName",
                     'tokenIcon2' => "tile,$tileId",
                     'tileId' => $tileId,
-                    'character' => $tileId,
+                    'character' => 0,
                     'preserve' => ['tokenIcon1', 'tokenIcon2']
                 ]);
             }
@@ -901,7 +905,7 @@ class SevenKnightsBewitched extends Table
 
     function __skipToDeploy()
     {
-        self::setGameStateValue(Globals::CAPTAIN, self::getActivePlayerId());
+        self::setGameStateValue(Globals::CAPTAIN, self::getCurrentPlayerId());
         $this->gamestate->jumpToState(State::DEPLOY_KNIGHTS);
     }
 

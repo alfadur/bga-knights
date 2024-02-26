@@ -367,14 +367,6 @@ define([
                 bubble.parentElement.removeChild(bubble);
                 break;
             }
-            case "appointCaptain": {
-                for (const token of document.querySelectorAll(".mur-token-container .mur-token")) {
-                    this.animatePlayerRemove(
-                        this.tokenTiles[parseInt(token.dataset.token)].player_id,
-                        token);
-                }
-                break;
-            }
         }
     },
 
@@ -758,6 +750,14 @@ define([
             this.animateTokens(data.args.playerId, tokens);
         });
         this.notifqueue.setSynchronous("vote", 1000);
+
+        dojo.subscribe("appoint", this, () => {
+            for (const token of document.querySelectorAll(".mur-token-container .mur-token")) {
+                this.animatePlayerRemove(
+                    this.tokenTiles[parseInt(token.dataset.token)].player_id,
+                    token);
+            }
+        });
 
         dojo.subscribe("move", this, data => {
             const tile = document.getElementById(`mur-tile-${data.args.tileId}`);
