@@ -39,6 +39,8 @@ CREATE TABLE IF NOT EXISTS `question`(
     `recipient_id` INT UNSIGNED NOT NULL,
     `tile_id` TINYINT UNSIGNED NOT NULL,
     `question` TINYINT UNSIGNED NOT NULL,
+    `expression` VARCHAR(32) NULL,
+    `expression_tiles` VARCHAR(8) NULL,
     `answer` TINYINT UNSIGNED NULL,
     PRIMARY KEY(`question_id`),
     FOREIGN KEY(`player_id`) REFERENCES `player`(`player_id`),

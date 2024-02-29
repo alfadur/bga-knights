@@ -431,6 +431,120 @@ class SevenKnightsBewitched extends Table
         }
         self::notifyAllPlayers('question', $message, $args);
 
+        $answer = (int)self::getUniqueValueFromDb(<<<EOF
+            SELECT ((1 << `character`) & ($valuesMask << 1)) <> 0
+            FROM tile WHERE tile_id = $tileId
+            EOF);
+        if (self::isWitchTeam($playerId)) {
+            $answer |= 0b10;
+        }
+
+        if ($coop) {
+            $this->recordAnswer($playerId, $answer & 0b1);
+        } else {
+            self::setGameStateValue(Globals::ANSWER, $answer);
+        }
+
+        $this->gamestate->nextState('');
+    }
+
+    function askMany(int $playerId, array $tileIds, string $expression) {
+        if (strlen($expression) > 16) {
+            throw new BgaUserException("Expression too long");
+        }
+
+        $activePlayerId = self::getActivePlayerId();
+
+        $tileSet = implode(",", $tileIds);
+        $characters = self::getObjectListFromDb(<<<EOF
+            SELECT `character` 
+            FROM tile LEFT JOIN inspection 
+                    ON (inspection.tile_id = tile.tile_id AND inspection.player_id = $playerId)
+                LEFT JOIN inspection AS self_inspection 
+                    ON (self_inspection.tile_id = tile.tile_id AND self_inspection.player_id = $activePlayerId)
+            WHERE tile.tile_id IN ($tileSet) 
+                AND (tile.player_id = $playerId OR inspection.player_id IS NOT NULL)
+                AND self_inspection.player_id IS NULL
+            ORDER BY tile.tile_id ASC
+            EOF, true);
+
+        if (count($characters) !== count($tileIds)) {
+            throw new BgaUserException("Invalid tile list");
+        }
+
+        $stack = [];
+
+        for ($i = 0; $i < strlen($expression); ++$i) {
+            $c = ord($expression[$i]);
+
+            if (ord('a') <= $c && $c <= ord('c')) {
+                $character = (int)$characters[$c - ord('a')];
+                if ($character === 0) {
+                    $stack = [false];
+                    break;
+                }
+                $stack[] = $character;
+            } else if (ord('0') <= $c && $c <= ord('9')) {
+                $stack[] = $c - ord('0');
+            } else if ($c === ord('p')) {
+                $stack[] = array_pop($stack) + array_pop($stack);
+            } else if ($c === ord('e')) {
+                $stack[] = array_pop($stack) === array_pop($stack);
+            } else if ($c === ord('l')) {
+                $stack[] = array_pop($stack) > array_pop($stack);
+            } else {
+                throw new BgaUserException("Invalid symbol: $expression[$i]");
+            }
+        }
+
+        if (count($stack) !== 1 && !is_bool($stack[0])) {
+            throw new BgaUserException("Malformed expression");
+        }
+
+        self::DbQuery(<<<EOF
+            INSERT INTO question(player_id, recipient_id, tile_id, question, expression, expression_tiles)
+                VALUES($activePlayerId, $playerId, 1, 0, '$expression', '$tileSet')
+            EOF);
+
+        self::incGamestateValue(Globals::ACTIONS_TAKEN, 1);
+        self::setGameStateValue(Globals::ASKER, $activePlayerId);
+
+        $playerName = self::getActivePlayerName();
+        $targetName = self::getPlayerNameById($playerId);
+        $args = [
+            'player_name1' => $playerName,
+            'player_name2' => $targetName,
+            'tokenIcon1' => "player,$playerName",
+            'tokenIcon2' => "player,$targetName",
+            'expressionIcon' => "$expression,$tileSet",
+            'preserve' => ['tokenIcon1', 'tokenIcon2', 'expressionIcon']
+        ];
+
+        $coop = (int)self::getGameStateValue(GameOption::COOP);
+
+        if ($coop) {
+            $args['question'] = [
+                'player_id' => $activePlayerId,
+                'recipient_id' => $playerId,
+                'expression' => $expression,
+                'expression_tiles' => $tileIds
+            ];
+        }
+        
+        self::notifyAllPlayers('question', clienttranslate('${tokenIcon1}${player_name1} asks ${tokenIcon2}${player_name2}, "is this true?" ${expressionIcon}'), $args);
+
+        $answer = $stack[0] ? 1 : 0;
+
+        if (self::isWitchTeam($playerId)) {
+            $answer |= 0b10;
+        }
+
+        if ($coop) {
+            $this->recordAnswer($playerId, $answer & 0b1);
+        } else {
+            self::setGameStateValue(Globals::ANSWER, $answer);
+        }
+
         $this->gamestate->nextState('');
     }
 
@@ -733,23 +847,19 @@ class SevenKnightsBewitched extends Table
     {
         $asker = (int)self::getGameStateValue(Globals::ASKER);
         if ($asker !== 0) {
-            $questionData = self::getObjectFromDb(<<<EOF
-                SELECT recipient_id, tile_id, question 
-                FROM question
-                WHERE answer IS NULL; 
+            $asked = self::getUniqueValueFromDb(<<<EOF
+                SELECT recipient_id FROM question
+                WHERE answer IS NULL
+                ORDER BY question_id DESC
+                LIMIT 1
                 EOF);
-            if ($questionData !== null) {
-                ['recipient_id' => $asked, 'tile_id' => $askedTile, 'question' => $question] = $questionData;
-                $answer = $this->determineAnswer($asked, $askedTile, $question);
+
+            if ($asked !== null) {
                 $coop = (int)self::getGameStateValue(GameOption::COOP);
 
-                if ($coop) {
-                    $this->recordAnswer($asked, $answer & 0b1);
-                } else {
-                    self::setGameStateValue(Globals::ANSWER, $answer);
+                if (!$coop) {
                     $this->gamestate->changeActivePlayer($asked);
                     $this->gamestate->nextState('answer');
-
                     return;
                 }
             }
@@ -907,7 +1017,12 @@ class SevenKnightsBewitched extends Table
 
     function upgradeTableDb($fromVersion)
     {
-
+        if ($fromVersion <= 240227_0029) {
+            self::applyDbUpgradeToAllDB(<<<EOF
+                ALTER TABLE DBPREFIX_question ADD `expression` VARCHAR(32) NULL;
+                ALTER TABLE DBPREFIX_question ADD `expression_tiles` VARCHAR(8);
+                EOF);
+        }
     }
 
     function __skipToVote()

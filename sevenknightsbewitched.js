@@ -144,13 +144,33 @@ function createMultiQuestionDialog() {
     const questionText = _("Is the following true...");
     return `<div>
         <div class="mur-question-text">${questionText}</div>
-        <div class ="mur-expression">
-            <div class="mur-expression-slot" data-node="0">
-                <div class="mur-expression-wildcard"></div>
-            </div>
-        </div>
+        <div class ="mur-expression"></div>
         <div id="mur-question-dialog-buttons"></div>
     </div>`;
+}
+
+const NodeGen = {
+    wrap(content) {
+        return `<div class="mur-expression-slot">${content}</div>`;
+    },
+
+    number(n) {
+        return `<div class="mur-single-number" data-number="${n}"></div>`;
+    },
+
+    token(token, index) {
+        token = parseInt(token);
+        const style = `--token-x: ${token % 4}; --token-y: ${Math.floor(token / 4)}`;
+        return `<div class="mur-token" data-token="${index}" style="${style}"></div>`;
+    },
+
+    operator(char) {
+        return `<div class="mur-expression-operator" data-operator="${char}"></div>`;
+    },
+
+    wildcard() {
+        return `<div class="mur-expression-wildcard"></div>`;
+    }
 }
 
 define([
@@ -553,6 +573,7 @@ define([
     },
 
     multiQuestionDialog(player, tiles) {
+        tiles.sort((t1, t2) => parseInt(t1.dataset.id) - parseInt(t2.dataset.id));
         const tokens = tiles.map(tile => parseInt(tile.dataset.token));
         const nodes = [{type: "wildcard"}];
 
@@ -561,6 +582,17 @@ define([
         dialog.setTitle(_("Choose a question"));
         dialog.setContent(createMultiQuestionDialog());
         dialog.show();
+
+        function reset() {
+            const expression = document.querySelector(".mur-expression:not(.mur-icon)");
+            console.log(expression);
+            expression.innerHTML = `<div class="mur-expression-slot" data-node="0">
+                <div class="mur-expression-wildcard"></div>
+            </div>`;
+            nodes.splice(0, nodes.length, {type: "wildcard"});
+            initWildcard(expression.querySelector(".mur-expression-wildcard"), 0);
+            askButton.classList.add("disabled");
+        }
 
         function ask() {
             const expression = [];
@@ -597,49 +629,30 @@ define([
         }
 
         this.addActionButton("mur-question-dialog-ask", _("Ask"), ask, "mur-question-dialog-buttons");
+        this.addActionButton("mur-question-dialog-reset", _("Reset"), reset, "mur-question-dialog-buttons", null, "gray");
+
         const askButton = document.getElementById("mur-question-dialog-ask");
         askButton.classList.add("disabled");
-
-        function wrap(content) {
-            return `<div class="mur-expression-slot">${content}</div>`;
-        }
-        function number(n) {
-            return `<div class="mur-single-number" data-number="${n}"></div>`;
-        }
-
-        function token(index) {
-            const token = tokens[parseInt(index)];
-            const style = `--token-x: ${token % 4}; --token-y: ${Math.floor(token / 4)}`;
-            return `<div class="mur-token" data-token="${index}" style="${style}"></div>`;
-        }
-
-        function operator(char) {
-            return `<div class="mur-expression-operator" data-operator="${char}"></div>`;
-        }
-
-        function wildcard() {
-            return `<div class="mur-expression-wildcard"></div>`;
-        }
 
         function generate(level) {
             const result = [];
 
             if (level === 0) {
-                result.push(operator('<'));
-                result.push(operator('='));
+                result.push(NodeGen.operator('<'));
+                result.push(NodeGen.operator('='));
             } else {
                 if (level < 3) {
-                    result.push(operator('+'));
+                    result.push(NodeGen.operator('+'));
                 }
                 for (let i = 1; i <= 9; ++i) {
-                    result.push(number(i));
+                    result.push(NodeGen.number(i));
                 }
                 for (let i = 0; i < tokens.length; ++i) {
-                    result.push(token(i));
+                    result.push(NodeGen.token(tokens[i], i));
                 }
             }
 
-            return result.map(wrap).join("");
+            return result.map(NodeGen.wrap).join("");
         }
 
         function indexOfElement(element) {
@@ -672,7 +685,7 @@ define([
                 };
 
                 for (let i = 0; i <= 1; ++i) {
-                    const newItem = createElement(slot.parentElement, wrap(wildcard()), index + 1 - i);
+                    const newItem = createElement(slot.parentElement, NodeGen.wrap(NodeGen.wildcard()), index + 1 - i);
                     newItem.dataset.node = (nodesCount + 1 - i).toString();
                     nodes.push({type: "wildcard"});
                     initWildcard(newItem.firstElementChild, level);
@@ -706,7 +719,7 @@ define([
             });
         }
 
-        initWildcard(document.querySelector(".mur-expression-wildcard"), 0);
+        reset();
     },
 
     addBubble(player, content, timeout) {
@@ -735,35 +748,47 @@ define([
     displayQuestion(question, timeout) {
         const player = document.getElementById(`mur-player-${question.player_id}`);
         const recipient = this.gamedatas.players[question.recipient_id];
-        const tileOwner = this.gamedatas.tiles.filter(tile => tile.id === question.tile_id.toString())[0].player_id;
-        const bitset = parseInt(question.question);
-        const isSingleNumber = (bitset & bitset - 1) === 0;
 
-        const message = isSingleNumber ?
-            (tileOwner === recipient.id ?
-                _("${tokenIcon1}${player_name1}, is your tile ${numberIcon}?") :
-                _("${tokenIcon1}${player_name1}, is ${tokenIcon2}${player_name2}'s tile ${numberIcon}?")) :
-            (tileOwner === recipient.id ?
-                _("${tokenIcon1}${player_name1}, is your tile one of ${numberIcon}?") :
-                _("${tokenIcon1}${player_name1}, is ${tokenIcon2}${player_name2}'s tile one of ${numberIcon}?"));
-        const args = {
-            player_name1: `<span style="color: #${recipient.color}">${recipient.name}</span>`,
-            tokenIcon1: `player,${recipient.name}`,
-            numberIcon: question.question
-        };
+        if ("expression" in question && question.expression !== null) {
+            const message = _("${tokenIcon1}${player_name1}, is this true? ${expressionIcon}");
+            const args = {
+                player_name1: `<span style="color: #${recipient.color}">${recipient.name}</span>`,
+                tokenIcon1: `player,${recipient.name}`,
+                expressionIcon: `${question.expression},${question.expression_tiles}`
+            };
 
-        if (tileOwner !== recipient.id) {
-            if (tileOwner === null) {
-                args.player_name2 = _("Knight-errant");
-                args.tokenIcon2 = `tile,${question.tile_id}`;
-            } else {
-                const owner = this.gamedatas.players[tileOwner];
-                args.player_name2 = `<span style="color: #${owner.color}">${owner.name}</span>`;
-                args.tokenIcon2 = `player,${owner.name}`
+            this.addBubble(player, this.format_string_recursive(message, args), timeout);
+        } else {
+            const tileOwner = this.gamedatas.tiles.filter(tile => tile.id === question.tile_id.toString())[0].player_id;
+            const bitset = parseInt(question.question);
+            const isSingleNumber = (bitset & bitset - 1) === 0;
+
+            const message = isSingleNumber ?
+                (tileOwner === recipient.id ?
+                    _("${tokenIcon1}${player_name1}, is your tile ${numberIcon}?") :
+                    _("${tokenIcon1}${player_name1}, is ${tokenIcon2}${player_name2}'s tile ${numberIcon}?")) :
+                (tileOwner === recipient.id ?
+                    _("${tokenIcon1}${player_name1}, is your tile one of ${numberIcon}?") :
+                    _("${tokenIcon1}${player_name1}, is ${tokenIcon2}${player_name2}'s tile one of ${numberIcon}?"));
+            const args = {
+                player_name1: `<span style="color: #${recipient.color}">${recipient.name}</span>`,
+                tokenIcon1: `player,${recipient.name}`,
+                numberIcon: question.question
+            };
+
+            if (tileOwner !== recipient.id) {
+                if (tileOwner === null) {
+                    args.player_name2 = _("Knight-errant");
+                    args.tokenIcon2 = `tile,${question.tile_id}`;
+                } else {
+                    const owner = this.gamedatas.players[tileOwner];
+                    args.player_name2 = `<span style="color: #${owner.color}">${owner.name}</span>`;
+                    args.tokenIcon2 = `player,${owner.name}`
+                }
             }
-        }
 
-        this.addBubble(player, this.format_string_recursive(message, args), timeout);
+            this.addBubble(player, this.format_string_recursive(message, args), timeout);
+        }
     },
 
     animatePlayerPlace(ownerId, item) {
@@ -1078,6 +1103,43 @@ define([
         return `<div class="mur-icon mur-position" data-position="${text}"></div>`;
     },
 
+    formatExpression(expression, ...tiles) {
+        const tokens = tiles.map(id => this.tokenTiles.indexOf(this.gamedatas.tiles.find(tile => tile.id === id)));
+        console.log("tokens", tokens);
+        const operators = {"p": "+", "e": "=", "l": "<"};
+        const nodes = [];
+
+        for (const c of expression) {
+            if ("a" <= c && c <= "c") {
+                const index = c.charCodeAt(0) - "a".charCodeAt(0);
+                nodes.push({type: "token", token: tokens[index], index});
+            } else if ("0"<= c && c <= "9") {
+                const number = c.charCodeAt(0) - "0".charCodeAt(0);
+                nodes.push({type: "number", number});
+            } else if (c in operators) {
+                const [left, right] = nodes.splice(nodes.length - 2, 2);
+                nodes.push({type: "operator", operator: operators[c], left, right});
+            }
+        }
+
+        function generate(node) {
+            if (node.type === "token") {
+                return NodeGen.wrap(NodeGen.token(node.token, node.index));
+            } else if (node.type === "number") {
+                return NodeGen.wrap(NodeGen.number(node.number));
+            } else {
+                const parts = [
+                    generate(node.left),
+                    NodeGen.wrap(NodeGen.operator(node.operator)),
+                    generate(node.right)
+                ];
+                return parts.join("");
+            }
+        }
+        const result = nodes.length > 0 ? generate(nodes[0]) : "";
+        return `<div class="mur-expression mur-icon">${result}</div>`;
+    },
+
     format_string_recursive(log, args) {
         if (args && !("substitutionComplete" in args)) {
             args.substitutionComplete = true;
@@ -1086,6 +1148,7 @@ define([
                 number: this.formatNumbers,
                 token: this.formatTokens,
                 position: this.formatPosition,
+                expression: this.formatExpression
             };
             for (const iconType of Object.keys(formatters)) {
                 const icons = Object.keys(args).filter(name => name.startsWith(`${iconType}Icon`));

@@ -425,7 +425,9 @@
     transition: color 100ms ease-in;
 }
 
-.mur-single-number.mur-selected::after, .mur-single-number.mur-icon::after {
+.mur-single-number.mur-selected::after,
+.mur-single-number.mur-icon::after,
+.mur-expression.mur-icon .mur-single-number::after {
     color: #e4faff;
 }
 
@@ -573,15 +575,24 @@
 }
 
 .mur-expression {
+    --slot-size: 40px;
     display: flex;
     flex-flow: row nowrap;
+    margin: 16px 0;
+    justify-content: center;
+}
+
+.mur-expression.mur-icon {
+    --slot-size: 22px;
+    pointer-events: none;
+    width: 100%;
     margin: 8px 0;
 }
 
 .mur-expression-slot {
     position: relative;
-    width: 40px;
-    height: 40px;
+    width: var(--slot-size);
+    height: var(--slot-size);
     display: flex;
     justify-content: center;
 }
@@ -605,9 +616,9 @@
     display: block;
     width: 100%;
     height: 100%;
-    line-height: 40px;
+    line-height: var(--slot-size);
     font-family: "Arial Black", sans-serif;
-    font-size: 34px;
+    font-size: calc(var(--slot-size) * 0.9);
     font-weight: bold;
     color: #7e6b27;
     text-align: center;
@@ -625,22 +636,40 @@
     content: attr(data-operator);
 }
 
-.mur-expression-operator:hover::before, .mur-expression-wildcard:hover::before {
+.mur-expression .mur-expression-operator:hover::before, .mur-expression-wildcard:hover::before {
     color: #ffdc53;
 }
 
 .mur-expression .mur-token {
-    --token-size: 40px;
+    --token-size: var(--slot-size);
+}
+
+.mur-expression .mur-token:hover {
+    outline: 2px solid #ffdc53;
+}
+
+.mur-expression .mur-single-number {
+    width: var(--slot-size);
+    height: var(--slot-size);
+    border-radius: calc(var(--slot-size) * 0.3);
+    padding: 0 4px;
+    margin-top: -2px;
+}
+
+.mur-expression .mur-single-number::after {
+    font-size: calc(var(--slot-size) * 0.9);
 }
 
 .mur-expression-selector {
     position: absolute;
     display: flex;
+    width: 340px;
     gap: 8px;
-    flex-flow: row nowrap;
+    flex-flow: row wrap;
+    justify-content: center;
     padding: 8px;
     border-radius: 16px;
     border: solid 1px black;
     top: calc(100% + 8px);
-    background-color: #4c2453;
+    background-color: #d8cecc;
 }

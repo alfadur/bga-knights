@@ -53,6 +53,16 @@ class action_sevenknightsbewitched extends APP_GameAction
         self::ajaxResponse();
     }
 
+    public function askMany()
+    {
+        self::setAjaxMode();
+        $playerId = self::getArg('playerId', AT_posint, true);
+        $tileIds = self::getArg('tileIds', AT_numberlist, true);
+        $expression = self::getArg('expression', AT_alphanum, true);
+        $this->game->askMany($playerId, explode(',', $tileIds), $expression);
+        self::ajaxResponse();
+    }
+
     public function answer()
     {
         self::setAjaxMode();
