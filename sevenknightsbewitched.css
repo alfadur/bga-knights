@@ -147,7 +147,7 @@
     width: var(--token-size);
     height: var(--token-size);
     top: 4px;
-    border-radius: 12px;
+    border-radius: 40px;
     box-shadow: 0 0.5px 0.5px black;
     opacity: 1;
     transform-origin: center;
@@ -409,7 +409,7 @@
     margin: 12px 4px 8px;
 }
 
-.mur-single-number.mur-selected, .mur-single-number.mur-icon {
+.mur-single-number.mur-selected, .mur-single-number.mur-icon, .mur-expression .mur-single-number {
     border-color: #1265a2;
     box-shadow: 0 2px 4px black;
     background-color: cornflowerblue;
@@ -570,4 +570,77 @@
     line-height: 20px;
     color: brown;
     font-weight: bold;
+}
+
+.mur-expression {
+    display: flex;
+    flex-flow: row nowrap;
+    margin: 8px 0;
+}
+
+.mur-expression-slot {
+    position: relative;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    justify-content: center;
+}
+
+.mur-expression-wildcard {
+    width: 100%;
+    height: 100%;
+    border-radius: 12px;
+    outline: dotted #7e6b27 4px;
+    margin: auto;
+}
+
+.mur-expression-operator {
+    position: relative;
+    width: 100%;
+    height: 100%;
+}
+
+.mur-expression-operator::before, .mur-expression-wildcard::before {
+    position: absolute;
+    display: block;
+    width: 100%;
+    height: 100%;
+    line-height: 40px;
+    font-family: "Arial Black", sans-serif;
+    font-size: 34px;
+    font-weight: bold;
+    color: #7e6b27;
+    text-align: center;
+}
+
+.mur-expression-wildcard::before {
+    content: "?";
+}
+
+.mur-expression-wildcard:hover {
+    outline-color: #ffdc53;
+}
+
+.mur-expression-operator::before {
+    content: attr(data-operator);
+}
+
+.mur-expression-operator:hover::before, .mur-expression-wildcard:hover::before {
+    color: #ffdc53;
+}
+
+.mur-expression .mur-token {
+    --token-size: 40px;
+}
+
+.mur-expression-selector {
+    position: absolute;
+    display: flex;
+    gap: 8px;
+    flex-flow: row nowrap;
+    padding: 8px;
+    border-radius: 16px;
+    border: solid 1px black;
+    top: calc(100% + 8px);
+    background-color: #4c2453;
 }

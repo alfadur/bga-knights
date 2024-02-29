@@ -63,9 +63,11 @@ function createPlayer(index, angle, player) {
 
 function createTile(tile, token) {
     const settings = [];
+    let tokenData = ""
     if (token !== null) {
         token = parseInt(token);
         settings.push(`--token-x: ${token % 4}; --token-y: ${Math.floor(token / 4)}`);
+        tokenData = `data-token="${token}"`;
     }
 
     const character = tile.character !== null ?
@@ -83,7 +85,7 @@ function createTile(tile, token) {
     return `<div id="mur-tile-${tile.id}" 
                 class="mur-tile ${classes.join(" ")}" 
                 style="${style}"
-                data-id="${tile.id}">
+                data-id="${tile.id}" ${tokenData}>
         <div class="mur-tile-back"></div>                
         <div class="mur-tile-front"></div>
         <div class="mur-tile-side"></div>
@@ -138,6 +140,19 @@ function createQuestionDialog(numberCount) {
     </div>`;
 }
 
+function createMultiQuestionDialog() {
+    const questionText = _("Is the following true...");
+    return `<div>
+        <div class="mur-question-text">${questionText}</div>
+        <div class ="mur-expression">
+            <div class="mur-expression-slot" data-node="0">
+                <div class="mur-expression-wildcard"></div>
+            </div>
+        </div>
+        <div id="mur-question-dialog-buttons"></div>
+    </div>`;
+}
+
 define([
     "dojo","dojo/_base/declare",
     "ebg/core/gamegui",
@@ -147,6 +162,7 @@ define([
         console.log(`${gameName} constructor`);
         this.selectedTile = null;
         this.selectedPlayer = null;
+        this.questionTiles = new Set();
         this.tokenTiles = Array(8).fill(null);
     },
 
@@ -343,8 +359,11 @@ define([
 
         if (this.isCurrentPlayerActive()) {
             switch (stateName) {
-                case "inspect":
                 case "clientSelectTiles":
+                    clearTag("mur-selected");
+                    this.questionTiles.clear();
+                //fallthrough
+                case "inspect":
                 case "vote":
                 case "clientDeploy": {
                     clearTag("mur-selectable");
@@ -384,11 +403,15 @@ define([
                     document.getElementById("mur-inspect").classList.add("disabled");
                     break;
                 }
-                case "clientSelectTiles":
-                case "clientDeploy": {
-                    this.addActionButton("mur-cancel", _("Cancel"), () => {
-                        this.restoreServerGameState();
-                    }, null, null, "gray");
+                case "clientSelectTiles": {
+                    this.addActionButton("mur-ask", _("Ask"), () => {
+                        if (this.questionTiles.size === 1) {
+                            this.questionDialog(this.selectedPlayer, this.questionTiles.keys().next().value);
+                        } else {
+                            this.multiQuestionDialog(this.selectedPlayer, Array.from(this.questionTiles));
+                        }
+                    });
+                    document.getElementById("mur-ask").classList.add("disabled");
                     break;
                 }
                 case "answer": {
@@ -432,6 +455,16 @@ define([
 
                     document.getElementById("mur-check")
                         .classList.toggle("disabled", !args.ready);
+                    break;
+                }
+            }
+
+            switch (stateName) {
+                case "clientSelectTiles":
+                case "clientDeploy": {
+                    this.addActionButton("mur-cancel", _("Cancel"), () => {
+                        this.restoreServerGameState();
+                    }, null, null, "gray");
                     break;
                 }
             }
@@ -517,6 +550,163 @@ define([
                 askButton.classList.toggle("disabled", selectionSize % numbersCount === 0);
             });
         }
+    },
+
+    multiQuestionDialog(player, tiles) {
+        const tokens = tiles.map(tile => parseInt(tile.dataset.token));
+        const nodes = [{type: "wildcard"}];
+
+        const dialog = new ebg.popindialog();
+        dialog.create("mur-question-dialog");
+        dialog.setTitle(_("Choose a question"));
+        dialog.setContent(createMultiQuestionDialog());
+        dialog.show();
+
+        function ask() {
+            const expression = [];
+            const operators = {
+                "<": "l",
+                "=": "e",
+                "+": "p"
+            }
+
+            function add(index) {
+                const node = nodes[index];
+                switch (node.type) {
+                    case "token":
+                        expression.push(String.fromCharCode("a".charCodeAt(0) + parseInt(node.token)));
+                        break;
+                    case "number":
+                        expression.push(String.fromCharCode("0".charCodeAt(0) + parseInt(node.number)));
+                        break;
+                    case "operator":
+                        add(node.left);
+                        add(node.right);
+                        expression.push(operators[node.operator] || "");
+                }
+            }
+            add(0);
+
+            this.request("askMany", {
+                playerId: player.dataset.player,
+                tileIds: tiles.map(tile => tile.dataset.id).join(","),
+                expression: expression.join("")
+            }, () => {
+                dialog.destroy();
+            });
+        }
+
+        this.addActionButton("mur-question-dialog-ask", _("Ask"), ask, "mur-question-dialog-buttons");
+        const askButton = document.getElementById("mur-question-dialog-ask");
+        askButton.classList.add("disabled");
+
+        function wrap(content) {
+            return `<div class="mur-expression-slot">${content}</div>`;
+        }
+        function number(n) {
+            return `<div class="mur-single-number" data-number="${n}"></div>`;
+        }
+
+        function token(index) {
+            const token = tokens[parseInt(index)];
+            const style = `--token-x: ${token % 4}; --token-y: ${Math.floor(token / 4)}`;
+            return `<div class="mur-token" data-token="${index}" style="${style}"></div>`;
+        }
+
+        function operator(char) {
+            return `<div class="mur-expression-operator" data-operator="${char}"></div>`;
+        }
+
+        function wildcard() {
+            return `<div class="mur-expression-wildcard"></div>`;
+        }
+
+        function generate(level) {
+            const result = [];
+
+            if (level === 0) {
+                result.push(operator('<'));
+                result.push(operator('='));
+            } else {
+                if (level < 3) {
+                    result.push(operator('+'));
+                }
+                for (let i = 1; i <= 9; ++i) {
+                    result.push(number(i));
+                }
+                for (let i = 0; i < tokens.length; ++i) {
+                    result.push(token(i));
+                }
+            }
+
+            return result.map(wrap).join("");
+        }
+
+        function indexOfElement(element) {
+            return Array.prototype.indexOf.call(element.parentElement.children, element)
+        }
+
+        function createNode(slot, level) {
+            const nodeIndex = parseInt(slot.dataset.node);
+            const element = slot.firstElementChild;
+
+            if (element.classList.contains("mur-token")) {
+                nodes[nodeIndex] = {
+                    type: "token",
+                    token: element.dataset.token
+                };
+            } else if (element.classList.contains("mur-single-number")) {
+                nodes[nodeIndex] = {
+                    type: "number",
+                    number: element.dataset.number
+                };
+            } else if (element.classList.contains("mur-expression-operator")) {
+                const nodesCount = nodes.length;
+                const index = indexOfElement(slot);
+
+                nodes[nodeIndex] = {
+                    type: "operator",
+                    operator: element.dataset.operator,
+                    left: nodesCount,
+                    right: nodesCount + 1
+                };
+
+                for (let i = 0; i <= 1; ++i) {
+                    const newItem = createElement(slot.parentElement, wrap(wildcard()), index + 1 - i);
+                    newItem.dataset.node = (nodesCount + 1 - i).toString();
+                    nodes.push({type: "wildcard"});
+                    initWildcard(newItem.firstElementChild, level);
+                }
+            }
+
+            askButton.classList.toggle("disabled", nodes.some(n => n.type === "wildcard"));
+        }
+
+        function initWildcard(element, level) {
+            element.addEventListener("mousedown", event => {
+                event.stopPropagation();
+                if (event.currentTarget === event.target) {
+                    const existingSelector = document.querySelector(".mur-expression-selector");
+                    if (existingSelector) {
+                        existingSelector.remove();
+                    }
+
+                    const slot = event.target.parentElement;
+                    const selector = createElement(slot,
+                        `<div class="mur-expression-selector">${generate(level)}</div>`);
+
+                    for (const item of selector.children) {
+                        item.addEventListener("mousedown", event => {
+                            event.stopPropagation();
+                            slot.innerHTML = item.innerHTML;
+                            createNode(slot, level + 1);
+                        })
+                    }
+                }
+            });
+        }
+
+        initWildcard(document.querySelector(".mur-expression-wildcard"), 0);
     },
 
     addBubble(player, content, timeout) {
@@ -699,9 +889,11 @@ define([
         if (this.checkAction("ask", true)) {
             if (this.selectPlayer(element)) {
                 this.setClientState("clientSelectTiles", {
-                    descriptionmyturn: _("${you} must select a tile to ask ${player_name} about"),
+                    descriptionmyturn: _("${you} must select tile(s) to ask ${player_name} about"),
                     possibleactions: ["clientAsk"],
-                    args: {player_name: `<span style="color: #${player.color}; -webkit-text-stroke: 0.5px black">${player.name}</span>`}
+                    args: {
+                        player_name: `<span style="color: #${player.color}; -webkit-text-stroke: 0.5px black">${player.name}</span>`
+                    }
                 });
             }
         } else if (this.checkAction("vote", true)) {
@@ -716,7 +908,14 @@ define([
             document.getElementById("mur-inspect").classList.toggle(
                 "disabled", !this.selectTile(tile));
         } else if (this.checkAction("clientAsk", true)) {
-            this.questionDialog(this.selectedPlayer, tile);
+            if (!this.questionTiles.has(tile)) {
+                this.questionTiles.add(tile);
+            } else {
+                this.questionTiles.delete(tile);
+            }
+
+            tile.classList.toggle("mur-selected", this.questionTiles.has(tile));
+            document.getElementById("mur-ask").classList.toggle("disabled", this.questionTiles.size === 0);
         } else if (this.checkAction("deploy", true)) {
             this.selectTile(tile);
             this.setClientState("clientDeploy", {
