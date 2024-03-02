@@ -319,6 +319,9 @@ define([
                 createArrow(data.players[inspection.player_id].token, place.childElementCount));
         }
 
+        const firstPlayer = document.getElementById(`mur-player-${data.firstPlayer}`);
+        createElement(firstPlayer, `<div id="mur-sword"></div>`)
+
         this.setupNotifications();
 
         console.log("Ending game setup");
@@ -883,6 +886,32 @@ define([
         return false;
     },
 
+    animateSword(playerId) {
+        const firstPlayer = document.getElementById(`mur-player-${playerId}`);
+        const sword = document.getElementById("mur-sword");
+
+        if (sword.parentElement === firstPlayer) {
+            return
+        }
+
+        const from = getElementCenter(sword);
+
+        firstPlayer.appendChild(sword);
+
+        const to = getElementCenter(sword);
+        const dX = from.x - to.x;
+        const dY = from.y - to.y;
+
+        sword.style.setProperty("--x", `${dX}px`);
+        sword.style.setProperty("--y", `${dY}px`);
+        sword.style.setProperty("--direction", Math.sign(dX).toString());
+        sword.classList.add("mur-animated");
+
+        sword.addEventListener("animationend",
+            () => sword.classList.remove("mur-animated"),
+            {once: true});
+    },
+
     roundCleanup() {
         const deployedTiles = document.querySelectorAll(".mur-placeholder:not(.mur-inactive) .mur-tile");
         const moves = [];
@@ -1047,6 +1076,10 @@ define([
 
         this.notifqueue.setSynchronous("score", 1000);
 
+        dojo.subscribe("round", this, data => {
+            console.log(data);
+            this.animateSword(data.args.firstPlayer);
+        });
     },
 
     formatList(...numbers) {

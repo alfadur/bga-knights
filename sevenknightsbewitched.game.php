@@ -204,7 +204,8 @@ class SevenKnightsBewitched extends Table
             'inspections' => $inspections,
             'questions' => $questions,
             'mode' => self::getGameStateValue(GameOption::MODE),
-            'coop' => self::getGameStateValue(GameOption::COOP)
+            'coop' => self::getGameStateValue(GameOption::COOP),
+            'firstPlayer' => self::getGameStateValue(Globals::FIRST_PLAYER)
         ];
     }
 
@@ -963,7 +964,9 @@ class SevenKnightsBewitched extends Table
                 self::DbQuery('DELETE FROM tile');
                 self::DbQuery('UPDATE player_status SET voted = NULL');
 
-                self::notifyAllPlayers('round', clienttranslate('New round begins'), []);
+                self::notifyAllPlayers('round', clienttranslate('New round begins'), [
+                    'firstPlayer' => $nextPlayer
+                ]);
 
                 self::setupTiles();
 
@@ -1018,10 +1021,10 @@ class SevenKnightsBewitched extends Table
     function upgradeTableDb($fromVersion)
     {
         if ($fromVersion <= 240227_0029) {
-            self::applyDbUpgradeToAllDB(<<<EOF
-                ALTER TABLE DBPREFIX_question ADD `expression` VARCHAR(32) NULL;
-                ALTER TABLE DBPREFIX_question ADD `expression_tiles` VARCHAR(8);
-                EOF);
+            self::applyDbUpgradeToAllDB(
+                'ALTER TABLE DBPREFIX_question ADD `expression` VARCHAR(32) NULL');
+            self::applyDbUpgradeToAllDB(
+                'ALTER TABLE DBPREFIX_question ADD `expression_tiles` VARCHAR(8) NULL');
         }
     }
 

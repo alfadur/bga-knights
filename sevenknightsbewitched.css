@@ -673,3 +673,50 @@
     top: calc(100% + 8px);
     background-color: #d8cecc;
 }
+
+#mur-sword {
+    position: absolute;
+    background-image: url("img/sword.png");
+    background-size: cover;
+    width: 40px;
+    height: 130px;
+    left: 130px;
+    right: 0;
+    bottom: 0;
+    top: 0;
+    margin: auto;
+    transition: top 100ms ease-in;
+}
+
+#mur-sword.mur-animated {
+    --x: 0px;
+    --y: 0px;
+    --direction: 0;
+
+    z-index: 11 !important;
+    animation-name: sword-follow-path;
+    animation-duration: 1000ms;
+    animation-timing-function: ease-in;
+    transform: translate(var(--x), var(--y));
+    top: -50px;
+}
+
+@keyframes sword-follow-path {
+    0% {
+        top: 0;
+    }
+    25% {
+        rotate: calc(7deg * var(--direction));
+    }
+    50% {
+        rotate: calc(12deg * var(--direction));
+    }
+    85% {
+        rotate: calc(7deg * var(--direction));
+    }
+    100% {
+        rotate: 0;
+        top: -50px;
+        transform: none;
+    }
+}
