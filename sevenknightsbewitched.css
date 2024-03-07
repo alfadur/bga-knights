@@ -382,6 +382,67 @@
     pointer-events: none;
 }
 
+#mur-status {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 180px;
+    bottom: 0;
+    -webkit-text-stroke: 1px #764800;
+    margin: auto;
+    display: flex;
+    flex-flow: row nowrap;
+    justify-content: center;
+    align-items: center;
+    gap: 2px;
+    
+    font-family: "Arial Black", sans-serif;
+    font-variant: small-caps;
+    font-size: 24px;
+    color: #e8ce00;
+    z-index: -1;
+}
+
+#mur-status :first-child {
+    width: 200px;
+    margin-right: 10px;
+    text-align: right;
+}
+
+#mur-status :last-child {
+    width: 200px;
+    margin-left: 10px;
+    text-align: left;
+}
+
+.mur-round-marker {
+    width: 37px;
+    height: 39px;
+    background-image: url("img/shield.svg");
+    background-size: cover;
+    margin: 0 -4px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    transition:
+        opacity 400ms ease-in-out,
+        filter 400ms ease-in-out,
+        scale 400ms ease-in-out;
+}
+
+.mur-round-marker:not(.mur-current) {
+    opacity: 0.3;
+    filter: grayscale(1);
+    scale: 0.85;
+    z-index: -2;
+}
+
+.mur-round-marker:after {
+    display: block;
+    content: attr(data-number);
+    margin-top: -5px;
+}
+
 .mur-question-text {
     font-size: 20px;
 }

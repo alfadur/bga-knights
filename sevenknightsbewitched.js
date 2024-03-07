@@ -192,6 +192,14 @@ define([
         this.gameMode = parseInt(data.mode);
         this.isCoop = parseInt(data.coop);
 
+        const status = document.getElementById("mur-status");
+        status.firstElementChild.innerText = _("Round");
+        status.lastElementChild.innerText = this.isCoop ? _("Cooperative") : _("Competitive");
+        const activeRoundMarker = status.querySelector(`:nth-child(${parseInt(data.round) + 1})`);
+        if (activeRoundMarker) {
+            activeRoundMarker.classList.add("mur-current");
+        }
+
         const deployment = document.getElementById("mur-deployment");
         const sequential = this.gameMode === GameMode.standard
             || this.gameMode === GameMode.darkness && this.isCoop;
@@ -1079,6 +1087,11 @@ define([
         dojo.subscribe("round", this, data => {
             console.log(data);
             this.animateSword(data.args.firstPlayer);
+            const activeRoundMarker = document.querySelector(".mur-round-marker.mur-current");
+            if (activeRoundMarker) {
+                activeRoundMarker.classList.remove("mur-current");
+                activeRoundMarker.nextElementSibling.classList.add("mur-current");
+            }
         });
     },
 

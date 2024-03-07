@@ -205,6 +205,7 @@ class SevenKnightsBewitched extends Table
             'questions' => $questions,
             'mode' => self::getGameStateValue(GameOption::MODE),
             'coop' => self::getGameStateValue(GameOption::COOP),
+            'round' => self::getGameStateValue(Globals::ROUND),
             'firstPlayer' => self::getGameStateValue(Globals::FIRST_PLAYER)
         ];
     }

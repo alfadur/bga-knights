@@ -15,15 +15,6 @@ $gameinfos = [
 // Name of the game in English (will serve as the basis for translation) 
 'game_name' => "Seven Knights Bewitched",
 
-// Game designer (or game designers, separated by commas)
-'designer' => 'Kamomeno Jona',
-
-// Game artist (or game artists, separated by commas)
-'artist' => ' Kadota Toshi, Nejima Iteru',
-
-// Year of FIRST publication of this game. Can be negative.
-'year' => 2023,
-
 // Game publisher (use empty string if there is no publisher)
 'publisher' => 'HEY!',
 
@@ -87,18 +78,6 @@ $gameinfos = [
 // NB: the default will be the first language in this list spoken by the player, so you should list them by popularity/preference.
 'language_dependency' => false,
 
-// Complexity of the game, from 0 (extremely simple) to 5 (extremely complex)
-'complexity' => 2,
-
-// Luck of the game, from 0 (absolutely no luck in this game) to 5 (totally luck driven)
-'luck' => 2,
-
-// Strategy of the game, from 0 (no strategy can be setup) to 5 (totally based on strategy)
-'strategy' => 2,
-
-// Diplomacy of the game, from 0 (no interaction in this game) to 5 (totally based on interaction and discussion between players)
-'diplomacy' => 2,
-
 // Colors attributed to players
 'player_colors' => [
     "D01127", "F39800", "FFF212", "009143",
@@ -128,16 +107,6 @@ $gameinfos = [
     //  maximum possible value: unlimited
     //  minimum possible value: 740
     'max' => null
-],
-
-// Game presentation
-// Short game presentation text that will appear on the game description page, structured as an array of paragraphs.
-// Each paragraph must be wrapped with totranslate() for translation and should not contain html (plain text without formatting).
-// A good length for this text is between 100 and 150 words (about 6 to 9 lines on a standard display)
-'presentation' => [
-    totranslate('Seven Knights Bewitched is a logic puzzle game with hidden identities. Knight order of a far western country of Stlute attempts to deploy in an orderly formation while being hindered by spells of Witch Myrmamius.'),
-    totranslate('Each round players are randomly divided into Knights and Witch teams. The Knights team scores points by correctly guessing the deployment order of each Knight, while the Witch team scores points by preventing that. Standard game is played in 3 rounds after which all players with the most earned points share the victory.'),
-    totranslate('No discussion takes place between players, the only allowed form of communication is asking a limited number of yes/no questions about each other\'s identity.')
 ],
 
 //////// BGA SANDBOX ONLY PARAMETERS (DO NOT MODIFY)
