@@ -14,8 +14,7 @@ require_once('modules/constants.inc.php');
 
 $game_options = [
     GameOption::MODE_ID => [
-        'name'=> totranslate('Game Ruleset'),
-        'level' => 'major',
+        'name'=> totranslate('Game Variant'),
         'default' => GameMode::STANDARD,
         'values' => [
             GameMode::STANDARD => [
@@ -31,7 +30,7 @@ $game_options = [
             ],
             GameMode::DARKNESS => [
                 'name' => totranslate('Groping in the dark'),
-                'description' => totranslate('Game mode for 3 and 4 players. Two inspections per round for each player using leftover tiles'),
+                'description' => totranslate('Game mode for 3 and 4 players. Two inspections per round for each player'),
                 'tmdisplay' => totranslate('Darkness')
             ],
         ],
@@ -81,6 +80,15 @@ $game_options = [
                 'tmdisplay' => totranslate('Cooperative'),
                 'description' => totranslate('Cooperative game without the Witch'),
                 'is_coop' => true
+            ]
+        ],
+        'startcondition' => [
+            1 => [
+                [
+                    'type' => 'maxplayers',
+                    'value' => 7,
+                    'message' => totranslate('Cooperative mode cannot be played with 8 players')
+                ]
             ]
         ]
     ]

@@ -24,7 +24,7 @@
         },
         "bewitched": {
             "id": 12,
-            "name": "Witch team wins",
+            "name": "Times bewitched",
             "type": "int"
         },
         "truths": {
