@@ -26,6 +26,7 @@ class SevenKnightsBewitched extends Table
             Globals::ANSWER => Globals::ANSWER_ID,
             Globals::ROUND => Globals::ROUND_ID,
             Globals::FIRST_PLAYER => Globals::FIRST_PLAYER_ID,
+            Globals::TEAM_WINS => Globals::TEAM_WINS_ID,
 
             GameOption::MODE => GameOption::MODE_ID,
             GameOption::COOP => GameOption::COOP_ID
@@ -206,6 +207,7 @@ class SevenKnightsBewitched extends Table
             'mode' => self::getGameStateValue(GameOption::MODE),
             'coop' => self::getGameStateValue(GameOption::COOP),
             'round' => self::getGameStateValue(Globals::ROUND),
+            'wins' => self::getGameStateValue(Globals::TEAM_WINS),
             'firstPlayer' => self::getGameStateValue(Globals::FIRST_PLAYER)
         ];
     }
@@ -719,6 +721,11 @@ class SevenKnightsBewitched extends Table
                 $conditions[] = "player_id = $playerId";
                 $players[] = $playerId;
             }
+
+            $teamWinValue = $tokens << 1 | ($knightsWin ? 1 : 0);
+            self::incGameStateValue(Globals::TEAM_WINS,
+                $teamWinValue << ($round - 1) * 9);
+
             $args = implode(' OR ', $conditions);
 
             self::DbQuery(<<<EOF
@@ -741,10 +748,13 @@ class SevenKnightsBewitched extends Table
                 'tokenIcons' => "bitset,$tokens",
                 'score' => $score,
                 'players' => $players,
+                'knightsWin' => $knightsWin,
                 'preserve' => ['tokenIcons']
             ]);
         } else {
-            self::notifyAllPlayers('message', 'The Knights team loses, so no points are awarded', []);
+            self::notifyAllPlayers('score', 'The Knights team loses, so no points are awarded', [
+                'knightsWin' => false,
+            ]);
         }
     }
 
@@ -1021,12 +1031,7 @@ class SevenKnightsBewitched extends Table
 
     function upgradeTableDb($fromVersion)
     {
-        if ($fromVersion <= 240227_0029) {
-            self::applyDbUpgradeToAllDB(
-                'ALTER TABLE DBPREFIX_question ADD `expression` VARCHAR(32) NULL');
-            self::applyDbUpgradeToAllDB(
-                'ALTER TABLE DBPREFIX_question ADD `expression_tiles` VARCHAR(8) NULL');
-        }
+
     }
 
     function __skipToVote()

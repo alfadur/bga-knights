@@ -40,6 +40,23 @@ function getElementCenter(element) {
     }
 }
 
+function createScore(playerId, token, round) {
+    function createScoreCard(index) {
+        const data = index < round - 1 ? `data-team=""` : "";
+        const extraClass = index >= 2 ? "mur-last-round" : "";
+        return `<div class="mur-score-card ${extraClass}" style="z-index: ${2 - index}" ${data}></div>`;
+    }
+
+    token = parseInt(token);
+    const style = `
+        --sprite-x: ${Math.floor(token / 4)}; --sprite-y: ${token % 4}`;
+
+    return `<div id="mur-player-score-${playerId}" class="mur-player-score">
+        <div class="mur-player-card" style="${style}"></div>
+        ${[0, 1, 2].map(createScoreCard).join("")}
+    </div>`
+}
+
 function createPlayer(index, angle, player) {
     let style;
     if (angle !== null) {
@@ -191,11 +208,12 @@ define([
 
         this.gameMode = parseInt(data.mode);
         this.isCoop = parseInt(data.coop);
+        this.round = parseInt(data.round);
 
         const status = document.getElementById("mur-status");
         status.firstElementChild.innerText = _("Round");
         status.lastElementChild.innerText = this.isCoop ? _("Cooperative") : _("Competitive");
-        const activeRoundMarker = status.querySelector(`:nth-child(${parseInt(data.round) + 1})`);
+        const activeRoundMarker = status.querySelector(`:nth-child(${this.round + 1})`);
         if (activeRoundMarker) {
             activeRoundMarker.classList.add("mur-current");
         }
@@ -268,11 +286,24 @@ define([
             createElement(playerArea, `<div class="mur-token-container"></div>`);
         }
 
+        const wins = parseInt(data.wins);
         for (const playerId of playerIds) {
             const player = players[playerId];
             const index = sortKey(player);
 
             createPlayerArea.call(this, player, index);
+            const panel = document.getElementById(`player_board_${playerId}`);
+            const score = createElement(panel, createScore(playerId, player.token, this.round));
+
+            const cardsCount = data.gamestate.name === "gameEnd" ? 3 : this.round -1;
+            for (let i = 0; i < cardsCount; ++i) {
+                const card = score.children[i + 1];
+                const record = wins >> i * 9;
+                const roundWon = (record & 1 << parseInt(player.token) + 1) !== 0;
+
+                card.classList.toggle("mur-loss", !roundWon);
+                card.dataset.team = (record & 1) ^ roundWon ? "witch" : "knights";
+            }
         }
 
         if (extraTiles.length) {
@@ -1076,9 +1107,21 @@ define([
 
         dojo.subscribe("score", this, data => {
             console.log(data);
-            const score = parseInt(data.args.score);
-            for (const playerId of data.args.players) {
-                this.scoreCtrl[parseInt(playerId)].incValue(score);
+            const args = data.args;
+
+            if ("score" in args) {
+                const score = parseInt(args.score);
+                for (const playerId of args.players) {
+                    this.scoreCtrl[parseInt(playerId)].incValue(score);
+                }
+            }
+
+            for (const playerId of Object.keys(this.gamedatas.players)) {
+                const scoreCards = document.getElementById(`mur-player-score-${playerId}`);
+                const card = scoreCards.children[this.round];
+                const roundWon = args.players && args.players.indexOf(playerId) >= 0;
+                card.classList.toggle("mur-loss", !roundWon);
+                card.dataset.team = roundWon ^ args.knightsWin ? "witch" : "knights";
             }
         });
 
@@ -1086,12 +1129,15 @@ define([
 
         dojo.subscribe("round", this, data => {
             console.log(data);
-            this.animateSword(data.args.firstPlayer);
+            ++this.round;
             const activeRoundMarker = document.querySelector(".mur-round-marker.mur-current");
+
             if (activeRoundMarker) {
                 activeRoundMarker.classList.remove("mur-current");
                 activeRoundMarker.nextElementSibling.classList.add("mur-current");
             }
+
+            this.animateSword(data.args.firstPlayer);
         });
     },
 

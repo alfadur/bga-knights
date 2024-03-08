@@ -62,6 +62,8 @@ interface Globals {
     const ROUND_ID = 14;
     const FIRST_PLAYER = 'first_player';
     const FIRST_PLAYER_ID = 15;
+    const TEAM_WINS = 'team_wins';
+    const TEAM_WINS_ID = 16;
 }
 
 interface Stats {

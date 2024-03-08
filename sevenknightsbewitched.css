@@ -443,6 +443,72 @@
     margin-top: -5px;
 }
 
+.mur-player-score {
+    --card-width: 68px;
+    --card-height: 50px;
+
+    position: relative;
+    display: flex;
+    flex-flow: row nowrap;
+    justify-content: flex-start;
+    align-items: center;
+    margin: 4px;
+    width: 100%;
+}
+
+.mur-player-card, .mur-score-card {
+    position: relative;
+    flex-shrink: 0;
+    width: var(--card-width);
+    height: var(--card-height);
+    border-radius: calc(var(--card-height) / 8);
+    box-shadow: 0 1px 2px black;
+}
+
+.mur-player-card {
+    --sprite-x: 0;
+    --sprite-y: 0;
+
+    background-image: url("img/player.jpg");
+    background-size:
+        calc(var(--card-width) * 2)
+        calc(var(--card-height) * 4);
+    background-position:
+        calc(var(--sprite-x) * var(--card-width) * -1)
+        calc(var(--sprite-y) * var(--card-height) * -1);
+    z-index: 3;
+}
+
+.mur-score-card {
+    background-image: url("img/score.jpg");
+    background-size:
+            calc(var(--card-width) * 2)
+            calc(var(--card-height) * 2);
+    transform-origin: center;
+    opacity: 0;
+    transition:
+        opacity 300ms ease-in,
+        margin-left 300ms ease-in;
+}
+
+.mur-score-card.mur-loss {
+    transform: rotate(180deg);
+    box-shadow: 0 -1px 2px black;
+}
+
+.mur-score-card[data-team] {
+    opacity: 1;
+    margin-left: calc(var(--card-width) / -2);
+}
+
+.mur-score-card[data-team="witch"] {
+    background-position-y: calc(var(--card-height) * -1);
+}
+
+.mur-score-card.mur-last-round {
+    background-position-x: calc(var(--card-width) * -1);
+}
+
 .mur-question-text {
     font-size: 20px;
 }
