@@ -391,15 +391,24 @@ define([
                 }
                 case "question": {
                     for (const player of document.querySelectorAll(".mur-player")) {
-                        if (player.dataset.player !== "none") {
+                        if (player.dataset.player !== "none"
+                            && player.dataset.player !== this.getCurrentPlayerId().toString())
+                        {
                             player.classList.add("mur-selectable");
                         }
                     }
                     break;
                 }
                 case "clientSelectTiles": {
-                    for (const tile of document.querySelectorAll(".mur-tile")) {
-                        tile.classList.add("mur-selectable");
+                    const inspectedTiles = this.gamedatas.inspections
+                        .filter(inspection => inspection.player_id === this.selectedPlayer.dataset.player)
+                        .map(inspection => inspection.tile_id);
+
+                    for (const tile of document.querySelectorAll(".mur-player .mur-tile")) {
+                        const isValidTile = !tile.classList.contains("mur-flipped")
+                            && (this.selectedPlayer.contains(tile)
+                                || inspectedTiles.indexOf(tile.dataset.id) >= 0);
+                        tile.classList.add(isValidTile ? "mur-selectable" : "mur-non-selectable");
                     }
                     break;
                 }
@@ -1022,7 +1031,12 @@ define([
             }
 
             tile.classList.toggle("mur-selected", this.questionTiles.has(tile));
-            document.getElementById("mur-ask").classList.toggle("disabled", this.questionTiles.size === 0);
+
+            const button = document.getElementById("mur-ask");
+            button.classList.toggle("disabled", this.questionTiles.size === 0);
+            button.innerText = this.questionTiles.size === 0 ?
+                _("Ask") :
+                this.format_string_recursive(_("Ask about ${count} tile(s)"), {count: this.questionTiles.size});
         } else if (this.checkAction("deploy", true)) {
             this.selectTile(tile);
             this.setClientState("clientDeploy", {
