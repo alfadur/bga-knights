@@ -80,11 +80,12 @@ function createPlayer(index, angle, player) {
 
 function createTile(tile, token) {
     const settings = [];
-    let tokenData = ""
+    const data = [];
+
     if (token !== null) {
         token = parseInt(token);
         settings.push(`--token-x: ${token % 4}; --token-y: ${Math.floor(token / 4)}`);
-        tokenData = `data-token="${token}"`;
+        data.push(`data-token="${token}"`);
     }
 
     const character = tile.character !== null ?
@@ -97,12 +98,13 @@ function createTile(tile, token) {
     }
     if (tile.character !== null) {
         classes.push("mur-flipped");
+        data.push(`data-character="${tile.character}"`);
     }
 
     return `<div id="mur-tile-${tile.id}" 
                 class="mur-tile ${classes.join(" ")}" 
-                style="${style}"
-                data-id="${tile.id}" ${tokenData}>
+                style="${style}" 
+                data-id="${tile.id}" ${data.join(" ")}>
         <div class="mur-tile-back"></div>                
         <div class="mur-tile-front"></div>
         <div class="mur-tile-side"></div>
@@ -514,11 +516,29 @@ define([
                     break;
                 }
                 case "vote": {
+                    const witchTile =
+                        document.querySelector(`.mur-tile.mur-flipped[data-character="0"]`);
+                    const witchPlayer =
+                        witchTile && witchTile.closest(".mur-player:not(#mur-player-none)");
+                    const currentPlayer =
+                        document.getElementById(`mur-player-${this.getCurrentPlayerId()}`);
+                    const currentTile =
+                        currentPlayer.querySelector(".mur-tile");
+
                     for (const player of document.querySelectorAll(".mur-player")) {
-                        if (player.dataset.player !== "none") {
+                        const isValidPlayer =
+                            player.dataset.player !== "none"
+                            && player !== witchPlayer
+                            && (currentPlayer !== witchPlayer
+                                || this.gamedatas.inspections.every(inspection =>
+                                    inspection.player_id !== player.dataset.player
+                                    || inspection.tile_id !== currentTile.dataset.id));
+
+                        if (player === currentPlayer || isValidPlayer) {
                             player.classList.add("mur-selectable");
                         }
                     }
+
                     this.addActionButton("mur-vote", _("Recommend"), () => {
                         this.request("vote", {
                             playerId: this.selectedPlayer.dataset.player
@@ -526,6 +546,7 @@ define([
                             this.selectPlayer(null);
                         });
                     });
+
                     document.getElementById("mur-vote").classList.add("disabled");
                     break;
                 }
@@ -947,6 +968,7 @@ define([
         tile.style.setProperty("--character", character);
         if (!tile.classList.contains("mur-flipped")) {
             tile.classList.add("mur-flipped");
+            tile.dataset.character = character.toString();
             return true;
         }
         return false;
