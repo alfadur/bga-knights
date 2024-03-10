@@ -82,7 +82,8 @@
     top: 0;
     transition:
         box-shadow 200ms ease-out,
-        top 100ms ease-in;
+        top 100ms ease-in,
+        opacity 200ms ease-in-out;
     perspective: 200px;
     perspective-origin: center;
     pointer-events: none;
@@ -94,6 +95,10 @@
 
 .mur-tile.mur-selectable:not(.mur-selected):hover {
     box-shadow: 0 0 12px cornflowerblue;
+}
+
+.mur-tile.mur-non-selectable {
+    opacity: 0.6;
 }
 
 .mur-tile.mur-selected {

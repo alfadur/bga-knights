@@ -61,8 +61,9 @@ $machinestates = [
     State::INSPECT => [
         Fsm::NAME => "inspect",
         Fsm::TYPE => FsmType::SINGLE_PLAYER,
-        Fsm::DESCRIPTION => clienttranslate('${actplayer} must inspect another player\'s tile'),
-        Fsm::OWN_DESCRIPTION => clienttranslate('${you} must inspect another player\'s tile'),
+        Fsm::DESCRIPTION => clienttranslate('${actplayer} must inspect a tile'),
+        Fsm::OWN_DESCRIPTION => clienttranslate('${you} must inspect a tile'),
+        Fsm::ARGUMENTS => 'argInspect',
         Fsm::POSSIBLE_ACTIONS => ['inspect'],
         Fsm::TRANSITIONS => ['' => State::DISPATCH_ACTION]
     ],

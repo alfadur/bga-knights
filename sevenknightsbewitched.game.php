@@ -993,6 +993,18 @@ class SevenKnightsBewitched extends Table
         }
     }
 
+    function argInspect(): array
+    {
+        $mode = (int)self::getGameStateValue(GameOption::MODE);
+        if ($mode === GameMode::DARKNESS) {
+            $actionsTaken = self::getGameStateValue(Globals::ACTIONS_TAKEN);
+            $stage = $actionsTaken < $this->getPlayersNumber() ? 0 : 1;
+            return ['stage' => $stage];
+        } else {
+            return [];
+        }
+    }
+
     function argAnswer(): array
     {
         $question = self::getObjectFromDb(

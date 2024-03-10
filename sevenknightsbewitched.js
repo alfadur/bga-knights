@@ -366,15 +366,27 @@ define([
         console.log("Ending game setup");
     },
 
-    onEnteringState(stateName, args) {
+    onEnteringState(stateName, state) {
         console.log(`Entering state: ${stateName}`);
 
         if (this.isCurrentPlayerActive()) {
             switch (stateName) {
                 case "inspect": {
-                    for (const tile of document.querySelectorAll(".mur-tile")) {
+                    const stage = "stage" in state.args ? state.args.stage : null;
+                    const playerId = this.getCurrentPlayerId();
+                    const constraint =
+                        stage === 0 ? `:not(#mur-player-none):not(#mur-player-${playerId})` :
+                        stage === 1 ? `#mur-player-none` :
+                                      `:not(#mur-player-${playerId})`;
+                    for (const tile of document.querySelectorAll(`.mur-player${constraint} .mur-tile`)) {
                         tile.classList.add("mur-selectable");
                     }
+                    for (const tile of document.querySelectorAll(`.mur-player .mur-tile`)) {
+                        if (!tile.classList.contains("mur-selectable")) {
+                            tile.classList.add("mur-non-selectable");
+                        }
+                    }
+
                     break;
                 }
                 case "question": {
@@ -426,6 +438,8 @@ define([
                     this.questionTiles.clear();
                 //fallthrough
                 case "inspect":
+                    clearTag("mur-non-selectable");
+                //fallthrough
                 case "vote":
                 case "clientDeploy": {
                     clearTag("mur-selectable");
