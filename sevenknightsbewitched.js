@@ -1001,6 +1001,7 @@ define([
     },
 
     roundCleanup() {
+        this.gamedatas.inspections = [];
         const deployedTiles = document.querySelectorAll(".mur-placeholder:not(.mur-inactive) .mur-tile");
         const moves = [];
         for (const tile of deployedTiles) {
@@ -1094,6 +1095,10 @@ define([
 
         dojo.subscribe("inspect", this, data => {
             console.log(data);
+            this.gamedatas.inspections.push({
+                player_id: data.args.playerId,
+                tile_id: data.args.tileId,
+            });
             this.animateArrow(data.args.playerId, data.args.tileId);
         });
 
