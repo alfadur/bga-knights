@@ -490,11 +490,7 @@ define([
                 }
                 case "clientSelectTiles": {
                     this.addActionButton("mur-ask", _("Ask"), () => {
-                        if (this.questionTiles.size === 1) {
-                            this.questionDialog(this.selectedPlayer, this.questionTiles.keys().next().value);
-                        } else {
-                            this.multiQuestionDialog(this.selectedPlayer, Array.from(this.questionTiles));
-                        }
+                        this.questionDispatch();
                     });
                     document.getElementById("mur-ask").classList.add("disabled");
                     break;
@@ -596,6 +592,14 @@ define([
 
     selectTile(tile) {
         return this.selectItem(tile, "selectedTile");
+    },
+
+    questionDispatch() {
+        if (this.questionTiles.size === 1) {
+            this.questionDialog(this.selectedPlayer, this.questionTiles.keys().next().value);
+        } else {
+            this.multiQuestionDialog(this.selectedPlayer, Array.from(this.questionTiles));
+        }
     },
 
     questionDialog(player, tile) {
@@ -1037,6 +1041,10 @@ define([
             button.innerText = this.questionTiles.size === 0 ?
                 _("Ask") :
                 this.format_string_recursive(_("Ask about ${count} tile(s)"), {count: this.questionTiles.size});
+
+            if (document.querySelectorAll(".mur-tile.mur-selectable").length === this.questionTiles.size) {
+                this.questionDispatch();
+            }
         } else if (this.checkAction("deploy", true)) {
             this.selectTile(tile);
             this.setClientState("clientDeploy", {
