@@ -431,7 +431,7 @@ define([
 
         switch (stateName) {
             case "answer": {
-                this.displayQuestion(args.args.question);
+                this.displayQuestion(state.args.question);
                 break;
             }
         }
