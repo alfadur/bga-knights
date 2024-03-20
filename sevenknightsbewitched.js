@@ -146,6 +146,33 @@ function createToken(token) {
     return `<div class="mur-icon mur-token" style="${style}" data-token="${token}"></div>`;
 }
 
+function createNotesDialog(numberCount, isCoop, tokens) {
+    const numbers = [1, 2, 3, 4, 5, 6, 7].slice(0, numberCount);
+    if (!isCoop) {
+        numbers.push("&#x1F496;");
+    }
+
+    const header = numbers.map(n =>
+        `<div class="mur-single-number" data-number="${n}"></div>`);
+    const rows = tokens.map(token => {
+        token = parseInt(token);
+        const style = `--token-x: ${token % 4}; --token-y: ${Math.floor(token / 4)}`;
+        const squares = numbers.map(_ => `<div class="mur-notes-square"></div>`);
+
+        return `<div class="mur-notes-row">
+            <div class="mur-token" style="${style}"></div>
+            ${squares.join("")}
+        </div>`;
+    });
+
+    return `<div class="mur-notes">
+        <div class="mur-notes-row">
+            ${header.join("")}
+        </div>
+        ${rows.join("")}
+    </div>`;
+}
+
 function createQuestionDialog(numberCount) {
     const questionText = _("Is the tile number one of...");
     const numbers = [1, 2, 3, 4, 5, 6, 7].slice(0, numberCount).map(n =>
@@ -267,6 +294,7 @@ define([
             return (parseInt(player.no) - 1 - currentIndex + playerCount) % playerCount;
         }
 
+
         const extraTiles = data.tiles.filter(tile =>
             tile.player_id === null);
 
@@ -291,8 +319,8 @@ define([
         const wins = parseInt(data.wins);
         for (const playerId of playerIds) {
             const player = players[playerId];
-            const index = sortKey(player);
 
+            sortedTokens
             createPlayerArea.call(this, player, index);
             const panel = document.getElementById(`player_board_${playerId}`);
             const score = createElement(panel, createScore(playerId, player.token, this.round));
@@ -613,6 +641,35 @@ define([
 
     selectTile(tile) {
         return this.selectItem(tile, "selectedTile");
+    },
+
+    notesDialog() {
+        const numbersCount = this.gameMode === GameMode.standard ?
+            this.gamedatas.tiles.length + this.isCoop - 1 : 7;
+        const tokens = [];
+
+        const players = Object.keys(this.gamedatas.players).map(id => this.gamedatas.players[id]);
+        const firstPlayer = this.gamedatas.players[this.gamedatas.firstPlayer];
+
+        if (firstPlayer) {
+            function sortKey(player) {
+                return (parseInt(player.no) - 1 - firstPlayer.no + players.length) % players.length;
+            }
+            players.sort((p1, p2) => sortKey(p1) - sortKey(p2));
+            tokens.push(...players.map(player => player.token));
+            this.tokenTiles.forEach((tile, token) => {
+                if (tile !== null && tile.player_id === null) {
+                    tokens.push(token);
+                }
+            });
+        }
+
+        const dialog = new ebg.popindialog();
+        dialog.create("mur-notes-dialog");
+        dialog.setTitle(_("Notes"));
+        dialog.setContent(createNotesDialog(numbersCount, this.isCoop, tokens));
+        dialog.show();
+        return dialog;
     },
 
     questionDispatch() {
@@ -1071,7 +1128,7 @@ define([
         } else if (this.checkAction("deploy", true)) {
             this.selectTile(tile);
             this.setClientState("clientDeploy", {
-                descriptionmyturn: _("You must select a space for the tile"),
+                descriptionmyturn: _("${you} must select a space for the tile"),
                 possibleactions: ["clientDeploy"]
             });
         }

@@ -525,11 +525,12 @@
 }
 
 .mur-single-number {
+    --number-size: 40px;
     display: flex;
     justify-content: center;
     align-items: center;
-    width: 40px;
-    height: 40px;
+    width: var(--number-size);
+    height: var(--number-size);
     border-radius: 12px;
     border: 2px solid #b9919159;
     transition:
@@ -851,4 +852,67 @@
         top: -50px;
         transform: none;
     }
+}
+
+.mur-notes {
+    --square-size: 70px;
+
+    position: relative;
+    display: flex;
+    flex-flow: column nowrap;
+    justify-content: start;
+    align-items: center;
+}
+
+.mur-notes-row {
+    display: flex;
+    flex-flow: row nowrap;
+}
+
+.mur-notes-row:first-child {
+    margin-left: var(--square-size);
+}
+
+.mur-notes-square {
+    width: var(--square-size);
+    height: var(--square-size);
+    outline: dotted #7e6b27 4px;
+    outline-offset: -2px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.mur-notes-square.mur-inactive {
+    outline-color: darkgray;
+    pointer-events: none;
+}
+
+.mur-notes-square:hover {
+    outline-color: #ffdc53;
+    z-index: 1;
+}
+
+.mur-notes-square::after {
+    display: block;
+    position: relative;
+    font-size: 50px;
+    color: #ffdc53;
+}
+
+.mur-notes-square[data-mark="1"]::after {
+    content: "\2571";
+}
+
+.mur-notes-square[data-mark="2"]::after {
+    content: "\2573";
+}
+
+.mur-notes .mur-token {
+    --token-size: var(--square-size);
+}
+
+.mur-notes .mur-single-number {
+    --number-size: var(--square-size);
+    border: none;
 }

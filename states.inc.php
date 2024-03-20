@@ -91,7 +91,7 @@ $machinestates = [
         Fsm::NAME => 'vote',
         Fsm::TYPE => FsmType::MULTIPLE_PLAYERS,
         Fsm::DESCRIPTION => clienttranslate('Other players must recommend someone for captain'),
-        Fsm::OWN_DESCRIPTION => clienttranslate('You must recommend a player for captain'),
+        Fsm::OWN_DESCRIPTION => clienttranslate('${you} must recommend a player for captain'),
         Fsm::ACTION => 'stMakeEveryoneActive',
         Fsm::POSSIBLE_ACTIONS => ['vote', 'cancel'],
         Fsm::TRANSITIONS => ['' => State::APPOINT_CAPTAIN]
