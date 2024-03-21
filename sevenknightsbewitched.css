@@ -8,6 +8,10 @@
  * -----
  */
 
+:root {
+    --selectable-size: 45px;
+}
+
 #mur-container {
     display: flex;
     width: 100%;
@@ -525,13 +529,13 @@
 }
 
 .mur-single-number {
-    --number-size: 40px;
+    --number-size: var(--selectable-size);
     display: flex;
     justify-content: center;
     align-items: center;
     width: var(--number-size);
     height: var(--number-size);
-    border-radius: 12px;
+    border-radius: calc(var(--number-size) * 0.3);
     border: 2px solid #b9919159;
     transition:
         background-color 200ms ease-in,
@@ -542,7 +546,10 @@
     margin: 12px 4px 8px;
 }
 
-.mur-single-number.mur-selected, .mur-single-number.mur-icon, .mur-expression .mur-single-number {
+.mur-single-number.mur-selected,
+.mur-single-number.mur-icon,
+.mur-expression .mur-single-number,
+.mur-notes-questions .mur-single-number {
     border-color: #1265a2;
     box-shadow: 0 2px 4px black;
     background-color: cornflowerblue;
@@ -553,14 +560,15 @@
 }
 
 .mur-single-number::after {
-    font-size: 34px;
+    font-size: calc(var(--number-size) * 0.85);
     color: #cacaca;
     transition: color 100ms ease-in;
 }
 
 .mur-single-number.mur-selected::after,
 .mur-single-number.mur-icon::after,
-.mur-expression.mur-icon .mur-single-number::after {
+.mur-expression .mur-single-number::after,
+.mur-notes-questions .mur-single-number::after {
     color: #e4faff;
 }
 
@@ -581,7 +589,7 @@
     display: block;
     width: var(--bubble-width);
     position: absolute;
-    z-index: 1054;
+    z-index: 100;
 
     left: calc(50% - var(--bubble-width) / 2 - 30% * var(--cx) / 2);
     top: calc(50% - 30% * var(--cy) / 2);
@@ -708,7 +716,7 @@
 }
 
 .mur-expression {
-    --slot-size: 40px;
+    --slot-size: var(--selectable-size);
     display: flex;
     flex-flow: row nowrap;
     margin: 16px 0;
@@ -855,9 +863,18 @@
 }
 
 .mur-notes {
-    --square-size: 70px;
+    --square-size: var(--selectable-size);
+    --mark-color: #df941f;/* #ffdc53*/
 
     position: relative;
+    display: flex;
+    flex-flow: row wrap;
+    justify-content: center;
+    align-items: center;
+    gap: 8px;
+}
+
+.nur-notes-table {
     display: flex;
     flex-flow: column nowrap;
     justify-content: start;
@@ -870,7 +887,8 @@
 }
 
 .mur-notes-row:first-child {
-    margin-left: var(--square-size);
+    margin-left: calc(var(--square-size) + 8px);
+    margin-bottom: 4px;
 }
 
 .mur-notes-square {
@@ -889,23 +907,25 @@
 }
 
 .mur-notes-square:hover {
-    outline-color: #ffdc53;
+    outline-color: var(--mark-color);
     z-index: 1;
 }
 
 .mur-notes-square::after {
     display: block;
     position: relative;
-    font-size: 50px;
-    color: #ffdc53;
+    font-size: calc(var(--square-size) * 0.8);
+    color: #42391f;
+    margin-top: calc(var(--square-size) * -0.2 - 2px);
+    font-weight: bold;
 }
 
 .mur-notes-square[data-mark="1"]::after {
-    content: "\2571";
+    content: "\2573";
 }
 
 .mur-notes-square[data-mark="2"]::after {
-    content: "\2573";
+    content: "\2571";
 }
 
 .mur-notes .mur-token {
@@ -914,5 +934,79 @@
 
 .mur-notes .mur-single-number {
     --number-size: var(--square-size);
+}
+
+.mur-notes-row .mur-single-number {
     border: none;
+}
+
+.mur-notes-row .mur-token {
+    margin-right: 8px;
+}
+
+.mur-notes-questions {
+    --square-size: 30px;
+    --slot-size: 30px;
+
+    font-size: 30px;
+    display: flex;
+    flex-flow: column nowrap;
+    align-items: flex-start;
+    pointer-events: none;
+}
+
+.mur-notes-question {
+    display: flex;
+    flex-flow: row nowrap;
+    justify-content: center;
+    margin: 4px;
+    gap: 2px;
+}
+
+.mur-notes-question .fa6-regular,
+.mur-notes-question .fa6-solid {
+    -webkit-text-stroke: 1px black;
+}
+
+.mur-notes-question .fa6-square-caret-right,
+.mur-notes-question .fa6-comment-dots {
+    color: #5e3817;
+}
+
+.mur-notes-question .fa6-question {
+    color: #8f1fb7;
+    margin-left: 6px;
+}
+
+.mur-notes-question .fa6-xmark {
+    color: #db4b4b
+}
+
+.mur-notes-question .fa6-check {
+    color: #40c240;
+}
+
+#mur-notes-button {
+    position: absolute;
+    right: 10px;
+    bottom: 2px;
+    color: #b0a095;
+    font-size: 50px;
+    transform-origin: center;
+    transition: color 200ms ease-in, transform 200ms ease-in;
+    z-index: 1;
+}
+
+#mur-notes-button:hover {
+    color: #c19c0a;
+    transform: scale(1.15);
+}
+
+#mur-notes-button::after {
+    display: block;
+    position: absolute;
+    content: "\f044";
+    font-size: 30px;
+    bottom: 6px;
+    left: 6px;
 }

@@ -426,14 +426,12 @@ class SevenKnightsBewitched extends Table
         self::giveExtraTime($activePlayerId);
 
         $coop = (int)self::getGameStateValue(GameOption::COOP);
-        if ($coop) {
-            $args['question'] = [
-                'player_id' => $activePlayerId,
-                'recipient_id' => $playerId,
-                'tile_id' => $tileId,
-                'question' => $valuesMask
-            ];
-        }
+        $args['question'] = [
+            'player_id' => $activePlayerId,
+            'recipient_id' => $playerId,
+            'tile_id' => $tileId,
+            'question' => $valuesMask
+        ];
         self::notifyAllPlayers('question', $message, $args);
 
         $answer = (int)self::getUniqueValueFromDb(<<<EOF
@@ -526,15 +524,12 @@ class SevenKnightsBewitched extends Table
         ];
 
         $coop = (int)self::getGameStateValue(GameOption::COOP);
-
-        if ($coop) {
-            $args['question'] = [
-                'player_id' => $activePlayerId,
-                'recipient_id' => $playerId,
-                'expression' => $expression,
-                'expression_tiles' => $tileIds
-            ];
-        }
+        $args['question'] = [
+            'player_id' => $activePlayerId,
+            'recipient_id' => $playerId,
+            'expression' => $expression,
+            'expression_tiles' => $tileIds
+        ];
         
         self::notifyAllPlayers('question', clienttranslate('${tokenIcon1}${player_name1} asks ${tokenIcon2}${player_name2}, "is this true?" ${expressionIcon}'), $args);
 

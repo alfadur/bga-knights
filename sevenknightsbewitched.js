@@ -146,7 +146,46 @@ function createToken(token) {
     return `<div class="mur-icon mur-token" style="${style}" data-token="${token}"></div>`;
 }
 
-function createNotesDialog(numberCount, isCoop, tokens) {
+function createExpression(expression, tokens, inline) {
+    const operators = {"p": "+", "e": "=", "l": "<"};
+    const nodes = [];
+
+    for (const c of expression) {
+        if ("a" <= c && c <= "c") {
+            const index = c.charCodeAt(0) - "a".charCodeAt(0);
+            nodes.push({type: "token", token: tokens[index], index});
+        } else if ("0"<= c && c <= "9") {
+            const number = c.charCodeAt(0) - "0".charCodeAt(0);
+            nodes.push({type: "number", number});
+        } else if (c in operators) {
+            const [left, right] = nodes.splice(nodes.length - 2, 2);
+            nodes.push({type: "operator", operator: operators[c], left, right});
+        }
+    }
+
+    function generate(node) {
+        if (node.type === "token") {
+            return NodeGen.wrap(NodeGen.token(node.token, node.index));
+        } else if (node.type === "number") {
+            return NodeGen.wrap(NodeGen.number(node.number));
+        } else {
+            const parts = [
+                generate(node.left),
+                NodeGen.wrap(NodeGen.operator(node.operator)),
+                generate(node.right)
+            ];
+            return parts.join("");
+        }
+    }
+    const result = nodes.length > 0 ? generate(nodes[0]) : "";
+    return inline ? result : `<div class="mur-expression mur-icon">${result}</div>`;
+}
+
+function createNotesDialog(numberCount, isCoop, tokens, questions) {
+    function createToken(token) {
+        return NodeGen.token(token, 0);
+    }
+
     const numbers = [1, 2, 3, 4, 5, 6, 7].slice(0, numberCount);
     if (!isCoop) {
         numbers.push("&#x1F496;");
@@ -155,21 +194,49 @@ function createNotesDialog(numberCount, isCoop, tokens) {
     const header = numbers.map(n =>
         `<div class="mur-single-number" data-number="${n}"></div>`);
     const rows = tokens.map(token => {
-        token = parseInt(token);
-        const style = `--token-x: ${token % 4}; --token-y: ${Math.floor(token / 4)}`;
         const squares = numbers.map(_ => `<div class="mur-notes-square"></div>`);
 
         return `<div class="mur-notes-row">
-            <div class="mur-token" style="${style}"></div>
+            ${createToken(token)}
             ${squares.join("")}
         </div>`;
     });
 
-    return `<div class="mur-notes">
-        <div class="mur-notes-row">
-            ${header.join("")}
-        </div>
-        ${rows.join("")}
+    const questionRows = questions.map(question => {
+        const questionContent = "expression" in question ?
+            createExpression(question.expression, question.tokens, true) :
+            `${createToken(question.tile)}
+             ${NodeGen.wrap(NodeGen.operator("="))}
+             ${question.numbers
+                .map(n => `<div class="mur-single-number" data-number="${n}"></div>`)
+                .join("")}`;
+
+        const answer = question.answer == null ? "" : parseInt(question.answer) ?
+            `<i class="fa6-solid fa6-check"></i>` : `<i class="fa6-solid fa6-xmark"></i>`;
+
+        return `<div class="mur-notes-question">
+            ${createToken(question.player)}
+            <i class="fa6-regular fa6-square-caret-right"></i>            
+            ${createToken(question.recipient)}
+            <i class="fa6-regular fa6-comment-dots"></i>
+            &nbsp;
+            ${questionContent}       
+            <i class="fa6-solid fa6-question"></i>
+            &nbsp;
+            ${answer}
+        </div>`;
+    });
+
+    return `<div>
+        <div class="mur-notes">
+            <div class="mur-notes-table">
+                <div class="mur-notes-row">${header.join("")}</div>
+                ${rows.join("")}
+            </div>          
+            <div class="mur-notes-questions">
+                ${questionRows.join("")}
+            </div>              
+        </div>      
     </div>`;
 }
 
@@ -319,8 +386,8 @@ define([
         const wins = parseInt(data.wins);
         for (const playerId of playerIds) {
             const player = players[playerId];
+            const index = sortKey(player);
 
-            sortedTokens
             createPlayerArea.call(this, player, index);
             const panel = document.getElementById(`player_board_${playerId}`);
             const score = createElement(panel, createScore(playerId, player.token, this.round));
@@ -333,6 +400,12 @@ define([
 
                 card.classList.toggle("mur-loss", !roundWon);
                 card.dataset.team = (record & 1) ^ roundWon ? "witch" : "knights";
+            }
+
+            if (playerId === this.getCurrentPlayerId().toString()) {
+                const notesButton = createElement(panel,
+                    `<div id="mur-notes-button" class="fa6-regular fa6-clipboard"></div>`);
+                notesButton.addEventListener("mousedown", () => this.notesDialog());
             }
         }
 
@@ -653,7 +726,7 @@ define([
 
         if (firstPlayer) {
             function sortKey(player) {
-                return (parseInt(player.no) - 1 - firstPlayer.no + players.length) % players.length;
+                return (parseInt(player.no) - firstPlayer.no + players.length) % players.length;
             }
             players.sort((p1, p2) => sortKey(p1) - sortKey(p2));
             tokens.push(...players.map(player => player.token));
@@ -664,12 +737,56 @@ define([
             });
         }
 
+        const questions = this.gamedatas.questions.map(question => {
+            const player = this.gamedatas.players[question.player_id].token;
+            const recipient = this.gamedatas.players[question.recipient_id].token;
+            if ("expression" in question && question.expression !== null) {
+                const tiles = Array.isArray(question.expression_tiles) ?
+                    question.expression_tiles :
+                    question.expression_tiles.split(",");
+                return {
+                    player,
+                    recipient,
+                    expression: question.expression,
+                    tokens: tiles.map(id =>
+                        this.tokenTiles.indexOf(
+                            this.gamedatas.tiles.find(tile => tile.id === id))),
+                    answer: question.answer
+                }
+            } else {
+                let bitset = parseInt(question.question);
+                const numbers = [];
+                for (let i = 0; i < 7; ++i) {
+                    if (bitset & 1 << i) {
+                        numbers.push(i + 1);
+                    }
+                }
+
+                return {
+                    player,
+                    recipient,
+                    numbers,
+                    tile: this.tokenTiles.indexOf(
+                        this.gamedatas.tiles.find(tile => tile.id === question.tile_id)),
+                    answer: question.answer
+                }
+            }
+        });
+
         const dialog = new ebg.popindialog();
         dialog.create("mur-notes-dialog");
         dialog.setTitle(_("Notes"));
-        dialog.setContent(createNotesDialog(numbersCount, this.isCoop, tokens));
+        dialog.setContent(createNotesDialog(numbersCount, this.isCoop, tokens, questions));
+        dialog.bCloseIsHiding = true;
+        dialog.onHide = () => dialog.destroy(1000);
         dialog.show();
-        return dialog;
+
+        for (const square of document.querySelectorAll(".mur-notes-square")) {
+            square.addEventListener("mousedown", () => {
+                const mark = parseInt(square.dataset.mark) || 0;
+                square.dataset.mark = ((mark + 1) % 3).toString();
+            });
+        }
     },
 
     questionDispatch() {
@@ -1059,6 +1176,7 @@ define([
 
     roundCleanup() {
         this.gamedatas.inspections = [];
+        this.gamedatas.questions = [];
         const deployedTiles = document.querySelectorAll(".mur-placeholder:not(.mur-inactive) .mur-tile");
         const moves = [];
         for (const tile of deployedTiles) {
@@ -1168,6 +1286,7 @@ define([
 
         dojo.subscribe("question", this, data => {
             console.log(data);
+            this.gamedatas.questions.push(data.args.question);
             if (this.isCoop) {
                 this.displayQuestion(data.args.question, 3000);
             }
@@ -1179,6 +1298,7 @@ define([
         dojo.subscribe("answer", this, data => {
             const text = data.args.answer ? _("Yes") : _("No");
             const player = document.getElementById(`mur-player-${data.args.playerId}`);
+            this.gamedatas.questions[this.gamedatas.questions.length - 1].answer = data.args.answer;
             this.addBubble(player, text, 2000);
         });
         this.notifqueue.setSynchronous("answer", 1000);
@@ -1318,38 +1438,7 @@ define([
     formatExpression(expression, ...tiles) {
         const tokens = tiles.map(id => this.tokenTiles.indexOf(this.gamedatas.tiles.find(tile => tile.id === id)));
         console.log("tokens", tokens);
-        const operators = {"p": "+", "e": "=", "l": "<"};
-        const nodes = [];
-
-        for (const c of expression) {
-            if ("a" <= c && c <= "c") {
-                const index = c.charCodeAt(0) - "a".charCodeAt(0);
-                nodes.push({type: "token", token: tokens[index], index});
-            } else if ("0"<= c && c <= "9") {
-                const number = c.charCodeAt(0) - "0".charCodeAt(0);
-                nodes.push({type: "number", number});
-            } else if (c in operators) {
-                const [left, right] = nodes.splice(nodes.length - 2, 2);
-                nodes.push({type: "operator", operator: operators[c], left, right});
-            }
-        }
-
-        function generate(node) {
-            if (node.type === "token") {
-                return NodeGen.wrap(NodeGen.token(node.token, node.index));
-            } else if (node.type === "number") {
-                return NodeGen.wrap(NodeGen.number(node.number));
-            } else {
-                const parts = [
-                    generate(node.left),
-                    NodeGen.wrap(NodeGen.operator(node.operator)),
-                    generate(node.right)
-                ];
-                return parts.join("");
-            }
-        }
-        const result = nodes.length > 0 ? generate(nodes[0]) : "";
-        return `<div class="mur-expression mur-icon">${result}</div>`;
+        return createExpression(expression, tokens);
     },
 
     format_string_recursive(log, args) {

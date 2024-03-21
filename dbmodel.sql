@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS player_status(
     `player_id` INT UNSIGNED NOT NULL,
     `token` TINYINT UNSIGNED NOT NULL,
     `voted` INT UNSIGNED NULL,
+    `notes` VARCHAR(64) NULL,
     PRIMARY KEY(`player_id`),
     FOREIGN KEY(`player_id`) REFERENCES `player`(`player_id`),
     FOREIGN KEY(`voted`) REFERENCES `player`(`player_id`)
