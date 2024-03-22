@@ -682,7 +682,7 @@ class SevenKnightsBewitched extends Table
     function updateNotes(string $notes): void {
         if (!(self::isSpectator() || self::isCurrentPlayerZombie())) {
             $playerId = self::getCurrentPlayerId();
-            self::DbQuery("UPDATE player_status SET notes = '$notes'");
+            self::DbQuery("UPDATE player SET notes = '$notes'");
             if (self::DbAffectedRow() !== 0) {
                 self::notifyPlayer($playerId, 'notes', '', ['notes' => $notes]);
             }
@@ -980,7 +980,7 @@ class SevenKnightsBewitched extends Table
                 $this->gamestate->changeActivePlayer($nextPlayer);
 
                 self::DbQuery('DELETE FROM tile');
-                self::DbQuery('UPDATE player_status SET voted = NULL, notes = NULL');
+                self::DbQuery('UPDATE player_status NATURAL JOIN player SET voted = NULL, notes = NULL');
 
                 self::notifyAllPlayers('round', clienttranslate('New round begins'), [
                     'firstPlayer' => $nextPlayer
@@ -1053,7 +1053,7 @@ class SevenKnightsBewitched extends Table
     {
         if ($fromVersion <= 240310_1702) {
             self::applyDbUpgradeToAllDB(
-                'ALTER TABLE DBPREFIX_player_status ADD `notes` VARCHAR(64) NULL');
+                'ALTER TABLE DBPREFIX_player ADD `notes` VARCHAR(64) NULL');
         }
     }
 
