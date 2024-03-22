@@ -682,7 +682,7 @@ class SevenKnightsBewitched extends Table
     function updateNotes(string $notes): void {
         if (!(self::isSpectator() || self::isCurrentPlayerZombie())) {
             $playerId = self::getCurrentPlayerId();
-            self::DbQuery("UPDATE player SET notes = '$notes'");
+            self::DbQuery("UPDATE player SET notes = '$notes' WHERE player_id = $playerId");
             if (self::DbAffectedRow() !== 0) {
                 self::notifyPlayer($playerId, 'notes', '', ['notes' => $notes]);
             }
