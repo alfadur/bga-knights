@@ -99,6 +99,14 @@ class action_sevenknightsbewitched extends APP_GameAction
         $this->game->cancel();
         self::ajaxResponse();
     }
+
+    public function updateNotes()
+    {
+        self::setAjaxMode();
+        $notes = self::getArg("notes", AT_numberlist, true);
+        $this->game->updateNotes($notes);
+        self::ajaxResponse();
+    }
 }
   
 

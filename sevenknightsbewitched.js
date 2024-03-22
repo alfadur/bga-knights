@@ -297,6 +297,7 @@ define([
         this.selectedPlayer = null;
         this.questionTiles = new Set();
         this.tokenTiles = Array(8).fill(null);
+        this.activeDialog = null;
     },
 
     setup(data) {
@@ -685,10 +686,13 @@ define([
     },
 
     request(action, args, onSuccess) {
-        this.ajaxcall(`/${gameName}/${gameName}/${action}.html`, {
-            lock: true,
-            ...args
-        }, () => {
+        args ||= {};
+        if (!("lock" in args)) {
+            args.lock = true;
+        } else {
+            delete args.lock;
+        }
+        this.ajaxcall(`/${gameName}/${gameName}/${action}.html`, args, () => {
             if (typeof onSuccess === "function") {
                 onSuccess();
             }
@@ -778,15 +782,43 @@ define([
         dialog.setTitle(_("Notes"));
         dialog.setContent(createNotesDialog(numbersCount, this.isCoop, tokens, questions));
         dialog.bCloseIsHiding = true;
-        dialog.onHide = () => dialog.destroy(1000);
-        dialog.show();
+        dialog.onHide = () => {
+            const values = [];
 
-        for (const square of document.querySelectorAll(".mur-notes-square")) {
-            square.addEventListener("mousedown", () => {
-                const mark = parseInt(square.dataset.mark) || 0;
-                square.dataset.mark = ((mark + 1) % 3).toString();
+            for (const row of document.querySelectorAll(".mur-notes-row")) {
+                let value = 0;
+                for (const square of row.querySelectorAll(".mur-notes-square")) {
+                    const mark = square.dataset.mark || 0;
+                    value = value << 2 | (mark & 0b11);
+                }
+                values.push(value);
+            }
+
+            const notes = values.join(",");
+            if (notes !== this.gamedatas.players[this.getCurrentPlayerId()].notes) {
+                this.request("updateNotes", {notes, lock: false});
+            }
+
+            dialog.destroy(1000);
+            this.activeDialog = null;
+        };
+        dialog.show();
+        this.activeDialog = dialog;
+
+        const notes = (this.gamedatas.players[this.getCurrentPlayerId()].notes || "").split(",");
+        const rows = Array.from(document.querySelectorAll(".mur-notes-row"));
+
+        rows.forEach((row, i) => {
+            const value = notes[i] || 0;
+            const squares = Array.from(row.querySelectorAll(".mur-notes-square"));
+            squares.forEach((square, j) => {
+                square.dataset.mark = (value >> (squares.length - j - 1) * 2 & 0b11).toString();
+                square.addEventListener("mousedown", () => {
+                    const mark = parseInt(square.dataset.mark) || 0;
+                    square.dataset.mark = ((mark + 1) % 3).toString();
+                });
             });
-        }
+        });
     },
 
     questionDispatch() {
@@ -1153,8 +1185,9 @@ define([
         const sword = document.getElementById("mur-sword");
 
         if (sword.parentElement === firstPlayer) {
-            return
+            return;
         }
+        this.gamedatas.firstPlayer = playerId;
 
         const from = getElementCenter(sword);
 
@@ -1177,6 +1210,7 @@ define([
     roundCleanup() {
         this.gamedatas.inspections = [];
         this.gamedatas.questions = [];
+
         const deployedTiles = document.querySelectorAll(".mur-placeholder:not(.mur-inactive) .mur-tile");
         const moves = [];
         for (const tile of deployedTiles) {
@@ -1378,6 +1412,23 @@ define([
             }
 
             this.animateSword(data.args.firstPlayer);
+        });
+
+        dojo.subscribe("notes", this, data => {
+            console.log(data);
+            this.gamedatas.players[this.getCurrentPlayerId()].notes = data.args.notes;
+
+            if (this.activeDialog !== null) {
+                const notes = (data.args.notes || "").split(",");
+                const rows = Array.from(document.querySelectorAll(".mur-notes-row"));
+
+                rows.forEach((row, i) => {
+                    const value = notes[i] || 0;
+                    const squares = Array.from(row.querySelectorAll(".mur-notes-square"));
+                    squares.forEach((square, j) =>
+                        square.dataset.mark = (value >> (squares.length - j - 1) * 2 & 0b11).toString());
+                });
+            }
         });
     },
 

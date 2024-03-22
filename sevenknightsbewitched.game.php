@@ -190,7 +190,8 @@ class SevenKnightsBewitched extends Table
         $players = self::getCollectionFromDb(<<<EOF
             SELECT player_id AS id, player_score AS score, 
                    player_name AS name, player_color AS color, 
-                   player_no AS no, token
+                   player_no AS no, token,
+                   IF(player_id = $currentPlayerId, notes, NULL) AS notes
             FROM player NATURAL JOIN player_status
             EOF);
 
@@ -678,6 +679,16 @@ class SevenKnightsBewitched extends Table
         $this->gamestate->nextState('check');
     }
 
+    function updateNotes(string $notes): void {
+        if (!(self::isSpectator() || self::isCurrentPlayerZombie())) {
+            $playerId = self::getCurrentPlayerId();
+            self::DbQuery("UPDATE player_status SET notes = '$notes'");
+            if (self::DbAffectedRow() !== 0) {
+                self::notifyPlayer($playerId, 'notes', '', ['notes' => $notes]);
+            }
+        }
+    }
+
     static function isWitchTeam(int $playerId): int {
         return (int)self::getUniqueValueFromDb(<<<EOF
             SELECT COUNT(*)
@@ -969,11 +980,12 @@ class SevenKnightsBewitched extends Table
                 $this->gamestate->changeActivePlayer($nextPlayer);
 
                 self::DbQuery('DELETE FROM tile');
-                self::DbQuery('UPDATE player_status SET voted = NULL');
+                self::DbQuery('UPDATE player_status SET voted = NULL, notes = NULL');
 
                 self::notifyAllPlayers('round', clienttranslate('New round begins'), [
                     'firstPlayer' => $nextPlayer
                 ]);
+                self::notifyAllPlayers('notes', '', ['notes' => null]);
 
                 self::setupTiles();
 
@@ -1039,7 +1051,10 @@ class SevenKnightsBewitched extends Table
 
     function upgradeTableDb($fromVersion)
     {
-
+        if ($fromVersion <= 240310_1702) {
+            self::applyDbUpgradeToAllDB(
+                'ALTER TABLE DBPREFIX_player_status ADD `notes` VARCHAR(64) NULL');
+        }
     }
 
     function __skipToVote()
