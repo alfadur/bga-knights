@@ -771,7 +771,7 @@ define([
                     recipient,
                     numbers,
                     tile: this.tokenTiles.indexOf(
-                        this.gamedatas.tiles.find(tile => tile.id === question.tile_id)),
+                        this.gamedatas.tiles.find(tile => parseInt(tile.id) === parseInt(question.tile_id))),
                     answer: question.answer
                 }
             }
