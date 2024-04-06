@@ -637,6 +637,15 @@
     pointer-events: none;
 }
 
+.mur-name-icon,
+.playername,
+.player-name > a:first-child,
+#pagemaintitletext > span:first-child,
+.mur-bubble-content > span {
+    font-weight: bold;
+    -webkit-text-stroke: 1px #0005;
+}
+
 .mur-single-number.mur-icon, .mur-position.mur-icon {
     width: 22px;
     height: 22px;
@@ -726,8 +735,13 @@
 .mur-expression.mur-icon {
     --slot-size: 22px;
     pointer-events: none;
-    width: 100%;
+    display: inline-flex;
     margin: 8px 0;
+}
+
+.mur-bubble-content .mur-expression.mur-icon {
+    width: 100%;
+    display: flex;
 }
 
 .mur-expression-slot {

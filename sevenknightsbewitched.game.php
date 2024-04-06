@@ -300,9 +300,12 @@ class SevenKnightsBewitched extends Table
                 WHERE tile_id = $tileId
                 EOF);
         $character = (int)$character;
-        $targetName ??= 'Knight-Errant';
 
-        self::notifyAllPlayers('inspect', clienttranslate('${tokenIcon1}${player_name1} inspects ${tokenIcon2}${player_name2}\'s tile'), [
+        $message = $targetName === null ?
+            clienttranslate('${tokenIcon1}${player_name1} inspects ${tokenIcon2}Knight-errant\'s tile') :
+            clienttranslate('${tokenIcon1}${player_name1} inspects ${tokenIcon2}${player_name2}\'s tile');
+
+        self::notifyAllPlayers('inspect', $message, [
             'player_name1' => $playerName,
             'player_name2' => $targetName,
             'tokenIcon1' => "player,$playerName",
@@ -320,7 +323,7 @@ class SevenKnightsBewitched extends Table
             clienttranslate('${tokenIcon}${player_name} turns out to be ${numberIcon}. You are now bewitched!') :
             clienttranslate('${tokenIcon}${player_name} turns out to be ${numberIcon}');
         self::notifyPlayer($activePlayerId, 'reveal', $message, [
-            'player_name' => $targetName,
+            'player_name' => $targetName ?? 'Knight-errant',
             'tokenIcon' => "tile,$tileId",
             'tileId' => $tileId,
             'character' => $character,
@@ -407,19 +410,20 @@ class SevenKnightsBewitched extends Table
                 clienttranslate('${tokenIcon1}${player_name1} asks ${tokenIcon2}${player_name2}, "is your tile ${numberIcon}?"') :
                 clienttranslate('${tokenIcon1}${player_name1} asks ${tokenIcon2}${player_name2}, "is your tile one of ${numberIcons}?"');
         } else {
-            $message = $numbersCount === 1 ?
-                clienttranslate('${tokenIcon1}${player_name1} asks ${tokenIcon2}${player_name2}, "is ${tokenIcon3}${player_name3}\'s tile ${numberIcon}?"') :
-                clienttranslate('${tokenIcon1}${player_name1} asks ${tokenIcon2}${player_name2}, "is ${tokenIcon3}${player_name3}\'s tile one of ${numberIcons}?"');
-
             if ($tileOwner === null) {
                 $tileToken = "tile,$tileId";
-                $ownerName = 'Knight-Errant';
+                $message = $numbersCount === 1 ?
+                    clienttranslate('${tokenIcon1}${player_name1} asks ${tokenIcon2}${player_name2}, "is ${tokenIcon3}Knight-errant\'s tile ${numberIcon}?"') :
+                    clienttranslate('${tokenIcon1}${player_name1} asks ${tokenIcon2}${player_name2}, "is ${tokenIcon3}Knight-errant\'s tile one of ${numberIcons}?"');
             } else {
-                $ownerName =  self::getPlayerNameById($tileOwner);
+                $ownerName = self::getPlayerNameById($tileOwner);
+                $args['player_name3'] = $ownerName;
+                $message = $numbersCount === 1 ?
+                    clienttranslate('${tokenIcon1}${player_name1} asks ${tokenIcon2}${player_name2}, "is ${tokenIcon3}${player_name3}\'s tile ${numberIcon}?"') :
+                    clienttranslate('${tokenIcon1}${player_name1} asks ${tokenIcon2}${player_name2}, "is ${tokenIcon3}${player_name3}\'s tile one of ${numberIcons}?"');
                 $tileToken = "player,$ownerName";
             }
 
-            $args['player_name3'] = $ownerName;
             $args['tokenIcon3'] = $tileToken;
             $args['preserve'][] = 'tokenIcon3';
         }
@@ -643,10 +647,17 @@ class SevenKnightsBewitched extends Table
 
         $owner = self::getUniqueValueFromDb(
             "SELECT player_id FROM tile WHERE tile_id = $tileId");
-        $ownerName = $owner ? self::getPlayerNameById($owner) : 'Knight-Errant';
+
+        if ($owner === null) {
+            $message = clienttranslate('${tokenIcon1}${player_name1} places ${tokenIcon2}Knight-errant\'s tile on position ${positionIcon}');
+            $ownerName = null;
+        } else {
+            $message = clienttranslate('${tokenIcon1}${player_name1} places ${tokenIcon2}${player_name2}\'s tile on position ${positionIcon}');
+            $ownerName = self::getPlayerNameById($owner);
+        }
 
         $playerName = self::getActivePlayerName();
-        self::notifyAllPlayers("move", clienttranslate('${tokenIcon1}${player_name1} places ${tokenIcon2}${player_name2}\'s tile on position ${positionIcon}'), [
+        self::notifyAllPlayers("move", $message, [
             'player_name1' => self::getActivePlayerName(),
             'tokenIcon1' => "player,$playerName",
             'player_name2' => $ownerName,
@@ -819,7 +830,7 @@ class SevenKnightsBewitched extends Table
 
         self::incStat(1, Stats::APPOINTED, $captain);
 
-        self::notifyAllPlayers('appoint', clienttranslate('${tokenIcon}${player_name} is appointed as captain'), [
+        self::notifyAllPlayers('appoint', clienttranslate('${tokenIcon}${player_name} is appointed Captain'), [
             'player_name' => $playerName,
             'tokenIcon' => "player,$playerName",
             'numberIcon' => $character === 0 ? $character : (1 << ($character - 1)),
@@ -829,22 +840,34 @@ class SevenKnightsBewitched extends Table
         $this->gamestate->changeActivePlayer($captain);
 
         if ($character === 0 || self::isWitchTeam($captain)) {
-            self::notifyAllPlayers('reveal', '', [
-                'player_name' => $playerName,
-                'tileId' => $tileId,
-                'character' => $character,
-            ]);
+            if ($character === 0) {
+                self::notifyAllPlayers('reveal', clienttranslate('${tokenIcon}${player_name} turns out to be ${numberIcon}'), [
+                    'player_name' => $playerName,
+                    'tokenIcon' => "tile,$tileId",
+                    'tileId' => $tileId,
+                    'character' => 0,
+                    'numberIcon' => 0,
+                    'preserve' => ['numberIcon', 'tokenIcon']
+                ]);
+            } else {
+                self::notifyAllPlayers('reveal', '', [
+                    'player_name' => $playerName,
+                    'tileId' => $tileId,
+                    'character' => $character,
+                ]);
 
-            if ($character !== 0) {
                 ['player_name' => $witchName, 'tile_id' => $tileId] =
                     self::getObjectFromDb(<<<'EOF'
                         SELECT player_name, tile_id
                         FROM tile NATURAL LEFT JOIN player 
                         WHERE tile.`character` = 0
                         EOF);
-                $witchName ??= 'Knight-Errant';
 
-                self::notifyAllPlayers('reveal', clienttranslate('${tokenIcon1}${player_name1} is bewitched by ${tokenIcon2}${player_name2}!'), [
+                $message = $witchName === null ?
+                    clienttranslate('${tokenIcon1}${player_name1} is bewitched by ${tokenIcon2}Knight-errant!') :
+                    clienttranslate('${tokenIcon1}${player_name1} is bewitched by ${tokenIcon2}${player_name2}!');
+
+                self::notifyAllPlayers('reveal', $message, [
                     'player_name1' => $playerName,
                     'player_name2' => $witchName,
                     'tokenIcon1' => "player,$playerName",
@@ -932,6 +955,7 @@ class SevenKnightsBewitched extends Table
                 ]);
                 $list[] = $character;
             } else if ($character !== 0) {
+                $missingTile = $tile;
                 ++$mistakeCount;
                 break;
             }
@@ -942,8 +966,16 @@ class SevenKnightsBewitched extends Table
         ]);
 
         if ($missingTile !== null) {
-            self::notifyAllPlayers('reveal', clienttranslate('${tokenIcon}${player_name}\'s tile ${numberIcon} has not been included'), [
-                'player_name' => self::getPlayerNameById($missingTile['player_id']),
+            if ($missingTile['player_id'] === null) {
+                $message = clienttranslate('${tokenIcon}Knight-errant\'s tile ${numberIcon} has not been included');
+                $playerName = null;
+            } else {
+                $message = clienttranslate('${tokenIcon}${player_name}\'s tile ${numberIcon} has not been included');
+                $playerName = self::getPlayerNameById($missingTile['player_id']);
+            }
+
+            self::notifyAllPlayers('reveal', $message, [
+                'player_name' => $playerName,
                 'tokenIcon' => "tile,$missingTile[tile_id]",
                 'numberIcon' => 1 << ((int)$missingTile['character'] - 1),
                 'tileId' => $missingTile['tile_id'],

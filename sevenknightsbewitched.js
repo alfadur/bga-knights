@@ -1062,10 +1062,14 @@ define([
             const message = isSingleNumber ?
                 (tileOwner === recipient.id ?
                     _("${tokenIcon1}${player_name1}, is your tile ${numberIcon}?") :
-                    _("${tokenIcon1}${player_name1}, is ${tokenIcon2}${player_name2}'s tile ${numberIcon}?")) :
+                    tileOwner === null ?
+                        _("${tokenIcon1}${player_name1}, is ${tokenIcon2}Knight-errant's tile ${numberIcon}?") :
+                        _("${tokenIcon1}${player_name1}, is ${tokenIcon2}${player_name2}'s tile ${numberIcon}?")) :
                 (tileOwner === recipient.id ?
                     _("${tokenIcon1}${player_name1}, is your tile one of ${numberIcon}?") :
-                    _("${tokenIcon1}${player_name1}, is ${tokenIcon2}${player_name2}'s tile one of ${numberIcon}?"));
+                    tileOwner === null ?
+                        _("${tokenIcon1}${player_name1}, is ${tokenIcon2}Knight-errant's tile one of ${numberIcon}?") :
+                        _("${tokenIcon1}${player_name1}, is ${tokenIcon2}${player_name2}'s tile one of ${numberIcon}?"));
             const args = {
                 player_name1: `<span style="color: #${recipient.color}">${recipient.name}</span>`,
                 tokenIcon1: `player,${recipient.name}`,
@@ -1074,7 +1078,6 @@ define([
 
             if (tileOwner !== recipient.id) {
                 if (tileOwner === null) {
-                    args.player_name2 = _("Knight-errant");
                     args.tokenIcon2 = `tile,${question.tile_id}`;
                 } else {
                     const owner = this.gamedatas.players[tileOwner];
@@ -1432,6 +1435,13 @@ define([
         });
     },
 
+    formatName(id) {
+        const player = this.gamedatas.players[id];
+        return player ?
+            `<span class="mur-name-icon" style="color: #${player.color};">${player.name}</span>` :
+            `<span style="color: #199c97;">Knight-errant</span>`;
+    },
+
     formatList(...numbers) {
         return numbers
             .map(n => parseInt(n) > 0 ?
@@ -1496,6 +1506,7 @@ define([
         if (args && !("substitutionComplete" in args)) {
             args.substitutionComplete = true;
             const formatters = {
+                name: this.formatName,
                 list: this.formatList,
                 number: this.formatNumbers,
                 token: this.formatTokens,
