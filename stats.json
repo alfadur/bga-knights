@@ -29,17 +29,17 @@
         },
         "truths": {
             "id": 13,
-            "name": "Number of truths told",
+            "name": "Truths chosen",
             "type": "int"
         },
         "lies":  {
             "id": 14,
-            "name": "Number of lies told",
+            "name": "Lies chosen",
             "type": "int"
         },
         "appointed": {
             "id": 15,
-            "name": "Number of times appointed as captain",
+            "name": "Number of times appointed Captain",
             "type": "int"
         },
         "mistakes":  {

@@ -556,6 +556,8 @@ class SevenKnightsBewitched extends Table
     function answer(bool $answer): void
     {
         self::checkAction('answer');
+        $activePlayerId = self::getActivePlayerId();
+
         $answer = $answer ? 1 : 0;
         $expectedAnswer = (int)self::getGameStateValue(Globals::ANSWER);
         $isTruth = ($expectedAnswer & 0b1) === $answer;
@@ -564,11 +566,12 @@ class SevenKnightsBewitched extends Table
             throw new BgaUserException('Invalid answer');
         }
 
-        $answerStat = $isTruth ? Stats::TRUTHS_TOLD : Stats::LIES_TOLD;
-        $activePlayerId = self::getActivePlayerId();
-        self::incStat(1, $answerStat, $activePlayerId);
-        self::giveExtraTime($activePlayerId);
+        if (($expectedAnswer & 0b10) !== 0) {
+            $answerStat = $isTruth ? Stats::TRUTHS_TOLD : Stats::LIES_TOLD;
+            self::incStat(1, $answerStat, $activePlayerId);
+        }
 
+        self::giveExtraTime($activePlayerId);
         $this->recordAnswer($activePlayerId, $answer);
         $this->gamestate->nextState('');
     }
