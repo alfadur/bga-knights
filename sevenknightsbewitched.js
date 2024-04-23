@@ -202,6 +202,16 @@ function createNotesDialog(numberCount, isCoop, tokens, questions) {
         </div>`;
     });
 
+    const toolIcons = [
+        "fa6-solid fa6-arrows-spin mur-selected",
+        "fa6-solid fa6-eraser",
+        "fa6-regular fa6-circle-check",
+        "fa6-solid fa6-square-xmark",
+        "fa6-solid fa6-question"
+    ];
+    const tools = toolIcons.map((icon, index) =>
+        `<div class="mur-notes-tool ${icon}" data-mode="${index - 1}"></div>`);
+
     const questionRows = questions.map(question => {
         const questionContent = "expression" in question ?
             createExpression(question.expression, question.tokens, true) :
@@ -233,6 +243,9 @@ function createNotesDialog(numberCount, isCoop, tokens, questions) {
                 <div class="mur-notes-row">${header.join("")}</div>
                 ${rows.join("")}
             </div>          
+            <div class="mur-notes-tools">
+                ${tools.join("")}
+            </div>
             <div class="mur-notes-questions">
                 ${questionRows.join("")}
             </div>              
@@ -814,11 +827,25 @@ define([
             squares.forEach((square, j) => {
                 square.dataset.mark = (value >> (squares.length - j - 1) * 2 & 0b11).toString();
                 square.addEventListener("mousedown", () => {
-                    const mark = parseInt(square.dataset.mark) || 0;
-                    square.dataset.mark = ((mark + 1) % 3).toString();
+                    const toolMode = parseInt(document.querySelector(".mur-notes-tool.mur-selected").dataset.mode);
+                    if (toolMode >= 0) {
+                        const value = parseInt(square.dataset.mark) === toolMode ? 0 : toolMode;
+                        square.dataset.mark = value.toString();
+                    } else {
+                        const mark = parseInt(square.dataset.mark) || 0;
+                        square.dataset.mark = ((mark + 1) % 4).toString();
+                    }
                 });
             });
         });
+
+        const tools = Array.from(document.querySelectorAll(".mur-notes-tool"));
+        for (const tool of tools) {
+            tool.addEventListener("mousedown", () => {
+                tools.forEach(other => other.classList.remove("mur-selected"));
+                tool.classList.add("mur-selected");
+            })
+        }
     },
 
     questionDispatch() {

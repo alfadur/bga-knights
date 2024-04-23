@@ -905,7 +905,7 @@
     margin-bottom: 4px;
 }
 
-.mur-notes-square {
+.mur-notes-square, .mur-notes-tool {
     width: var(--square-size);
     height: var(--square-size);
     outline: dotted #7e6b27 4px;
@@ -920,7 +920,7 @@
     pointer-events: none;
 }
 
-.mur-notes-square:hover {
+.mur-notes-square:hover, .mur-notes-tool:hover, .mur-notes-tool.mur-selected {
     outline-color: var(--mark-color);
     z-index: 1;
 }
@@ -928,18 +928,23 @@
 .mur-notes-square::after {
     display: block;
     position: relative;
+    font-family: "Font Awesome 6 Free";
     font-size: calc(var(--square-size) * 0.8);
-    color: #42391f;
-    margin-top: calc(var(--square-size) * -0.2 - 2px);
     font-weight: bold;
+    -webkit-text-stroke: 1px #0005;
+    color: #42391f;
 }
 
 .mur-notes-square[data-mark="1"]::after {
-    content: "\2573";
+    content: "\f058";
 }
 
 .mur-notes-square[data-mark="2"]::after {
-    content: "\2571";
+    content: "\f2d3";
+}
+
+.mur-notes-square[data-mark="3"]::after {
+    content: "\3f";
 }
 
 .mur-notes .mur-token {
@@ -956,6 +961,38 @@
 
 .mur-notes-row .mur-token {
     margin-right: 8px;
+}
+
+.mur-notes-tools {
+    display: flex;
+    flex-flow: column nowrap;
+    gap: 8px;
+}
+
+.mur-notes-tool {
+    font-size: 24px;
+    transition: font-size 200ms ease-in-out;
+    border-radius: 4px;
+    outline-style: solid;
+}
+
+.mur-notes-tool[data-mode="1"],
+.mur-notes-square[data-mark="1"]::after{
+    color: #52bd2c;
+}
+
+.mur-notes-tool[data-mode="2"],
+.mur-notes-square[data-mark="2"]::after{
+    color: #ec3f18;
+}
+
+.mur-notes-tool[data-mode="3"],
+.mur-notes-square[data-mark="3"]::after{
+    color: #3461b7;
+}
+
+.mur-notes-tool:hover, .mur-notes-tool.mur-selected {
+    font-size: 32px;
 }
 
 .mur-notes-questions {
