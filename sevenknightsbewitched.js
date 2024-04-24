@@ -181,7 +181,7 @@ function createExpression(expression, tokens, inline) {
     return inline ? result : `<div class="mur-expression mur-icon">${result}</div>`;
 }
 
-function createNotesDialog(numberCount, isCoop, tokens, questions) {
+function createNotesDialog(numberCount, isCoop, tokens, questions, inspections) {
     function createToken(token) {
         return NodeGen.token(token, 0);
     }
@@ -237,6 +237,30 @@ function createNotesDialog(numberCount, isCoop, tokens, questions) {
         </div>`;
     });
 
+    const inspectionTokens = tokens.map((token, index) => {
+        const angle = index * 2 * Math.PI / tokens.length;
+        const style = `--cx: ${Math.sin(angle)}; --cy: ${-Math.cos(angle)}`;
+        return `<div class="mur-inspection-token" style="${style}">${createToken(token)}</div>`;
+    });
+
+    const inspectionArrows = inspections.map(points => {
+        const [from, to] = points.map(p => {
+            const angle = tokens.findIndex(t => parseInt(t) === parseInt(p)) * 2 * Math.PI / tokens.length;
+            return {x: Math.sin(angle), y: -Math.cos(angle)};
+        });
+        const length = Math.sqrt(Math.pow(to.x - from.x, 2) + Math.pow(to.y - from.y, 2));
+        const dir = {
+            x: 0.25 * (to.x - from.x) / length ,
+            y: 0.25 * (to.y - from.y) / length
+        }
+        const arrow = 0.3;
+        const path = `M${from.x + dir.x},${from.y + dir.y}L${to.x - dir.x},${to.y - dir.y}M${to.x - (1 + arrow) * dir.x - arrow * dir.y},${to.y - (1 + arrow) * dir.y + arrow * dir.x}L${to.x - dir.x},${to.y - dir.y}L${to.x - (1 + arrow) * dir.x + arrow * dir.y},${to.y - (1 + arrow) * dir.y - arrow * dir.x}`;
+        return {
+            back: `<path class="mur-path-back" d="${path}"></path>`,
+            front: `<path d="${path}"></path>`
+        };
+    });
+
     return `<div>
         <div class="mur-notes">
             <div class="mur-notes-table">
@@ -248,7 +272,14 @@ function createNotesDialog(numberCount, isCoop, tokens, questions) {
             </div>
             <div class="mur-notes-questions">
                 ${questionRows.join("")}
-            </div>              
+            </div>     
+            <div class="mur-notes-inspections">
+                <svg class="mur-inspections-svg" viewBox="-1 -1 2 2">
+                    ${inspectionArrows.map(a => a.back).join("")}
+                    ${inspectionArrows.map(a => a.front).join("")}
+                </svg>
+                ${inspectionTokens.join("")}
+            </div>         
         </div>      
     </div>`;
 }
@@ -790,10 +821,18 @@ define([
             }
         });
 
+        const inspections = this.gamedatas.inspections.map(inspection => {
+            const tileId = parseInt(inspection.tile_id);
+            const from = this.gamedatas.players[inspection.player_id].token;
+            const to = this.tokenTiles.indexOf(
+                this.gamedatas.tiles.find(tile => parseInt(tile.id) === tileId));
+            return [from, to];
+        });
+
         const dialog = new ebg.popindialog();
         dialog.create("mur-notes-dialog");
         dialog.setTitle(_("Notes"));
-        dialog.setContent(createNotesDialog(numbersCount, this.isCoop, tokens, questions));
+        dialog.setContent(createNotesDialog(numbersCount, this.isCoop, tokens, questions, inspections));
         dialog.bCloseIsHiding = true;
         dialog.onHide = () => {
             const values = [];

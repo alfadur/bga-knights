@@ -931,7 +931,7 @@
     font-family: "Font Awesome 6 Free";
     font-size: calc(var(--square-size) * 0.8);
     font-weight: bold;
-    -webkit-text-stroke: 1px #0005;
+    -webkit-text-stroke: 1px black;
     color: #42391f;
 }
 
@@ -964,16 +964,24 @@
 }
 
 .mur-notes-tools {
+    --radius: 10px;
     display: flex;
     flex-flow: column nowrap;
-    gap: 8px;
 }
 
 .mur-notes-tool {
     font-size: 24px;
     transition: font-size 200ms ease-in-out;
-    border-radius: 4px;
     outline-style: solid;
+    outline-color: #4c4c4c;
+}
+
+.mur-notes-tool:first-child {
+    border-radius: var(--radius) var(--radius) 0 0;
+}
+
+.mur-notes-tool:last-child {
+    border-radius: 0 0 var(--radius) var(--radius);
 }
 
 .mur-notes-tool[data-mode="1"],
@@ -1035,6 +1043,48 @@
 
 .mur-notes-question .fa6-check {
     color: #40c240;
+}
+
+.mur-notes-inspections {
+    --square-size: 36px;
+    position: relative;
+    width: calc(var(--square-size) * 7);
+    height: calc(var(--square-size) * 7);
+    pointer-events: none;
+}
+
+.mur-inspection-token {
+    position: absolute;
+    inset: 0;
+    margin: auto;
+    transform: translate(
+        calc((50% - var(--square-size) / 2) * var(--cx)),
+        calc((50% - var(--square-size) / 2) * var(--cy))
+    );
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.mur-inspections-svg {
+    width: calc(100% - var(--square-size));
+    height: calc(100% - var(--square-size));
+    position: absolute;
+    left: calc(var(--square-size) / 2);
+    top: calc(var(--square-size) / 2);
+}
+
+.mur-inspections-svg path {
+    stroke: #c6c6c6;
+    stroke-width: 0.05;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    fill: none;
+}
+
+.mur-inspections-svg path.mur-path-back {
+    stroke: black;
+    stroke-width: 0.1;
 }
 
 #mur-notes-button {
