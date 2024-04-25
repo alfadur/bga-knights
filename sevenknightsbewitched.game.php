@@ -190,7 +190,7 @@ class SevenKnightsBewitched extends Table
         $players = self::getCollectionFromDb(<<<EOF
             SELECT player_id AS id, player_score AS score, 
                    player_name AS name, player_color AS color, 
-                   player_no AS no, token,
+                   player_no AS no, token, voted,
                    IF(player_id = $currentPlayerId, notes, NULL) AS notes
             FROM player NATURAL JOIN player_status
             EOF);

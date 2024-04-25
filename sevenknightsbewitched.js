@@ -406,7 +406,6 @@ define([
             return (parseInt(player.no) - 1 - currentIndex + playerCount) % playerCount;
         }
 
-
         const extraTiles = data.tiles.filter(tile =>
             tile.player_id === null);
 
@@ -508,6 +507,14 @@ define([
 
         const firstPlayer = document.getElementById(`mur-player-${data.firstPlayer}`);
         createElement(firstPlayer, `<div id="mur-sword"></div>`)
+
+        for (const playerId of playerIds) {
+            const player = players[playerId];
+            if (player.voted !== null) {
+                const place = document.querySelector(`#mur-player-${player.voted} .mur-token-container`);
+                createElement(place, createToken(player.token));
+            }
+        }
 
         this.setupNotifications();
 
@@ -1238,15 +1245,73 @@ define([
         }
     },
 
+    animateJump(item, delayMs) {
+        item.style.setProperty("--jump-delay", `${delayMs}ms`);
+        item.classList.add("mur-jump");
+
+        const handler = event => {
+            if (event.animationName === "fall-path") {
+                item.removeEventListener("animationend", handler);
+                item.classList.remove("mur-jump");
+                item.style.setProperty("--jump-delay", `0ms`);
+            }
+        };
+        item.addEventListener("animationend", handler);
+    },
+
     revealCharacter(tileId, character) {
         const tile = document.querySelector(`#mur-tile-${tileId}`);
         tile.style.setProperty("--character", character);
         if (!tile.classList.contains("mur-flipped")) {
             tile.classList.add("mur-flipped");
             tile.dataset.character = character.toString();
+
+            const player = tile.closest(".mur-player");
+
+            if (player) {
+                for (const token of player.querySelectorAll(".mur-token-container .mur-token")) {
+                    this.animateJump(token, 150);
+                }
+            }
             return true;
         }
         return false;
+    },
+
+    moveTile(tileId, position) {
+        const tile = document.getElementById(`mur-tile-${tileId}`);
+        const place = document.getElementById(`mur-placeholder-${position}`);
+        const moves = [{tile, place}];
+
+        const player = tile.closest(".mur-player");
+
+        if (player) {
+            for (const token of player.querySelectorAll(".mur-token-container .mur-token")) {
+                this.animateJump(token, 150);
+            }
+        }
+
+        const oldTile = place.firstElementChild;
+
+        if (oldTile) {
+            const returnPlace = tile.parentElement.classList.contains("mur-inactive") ?
+                document.getElementById(`mur-tile-placeholder-${oldTile.dataset.id}`) :
+                tile.parentElement;
+
+            moves.push({
+                tile: oldTile,
+                place: returnPlace
+            });
+
+            const returnPlayer = returnPlace.closest(".mur-player");
+
+            if (returnPlayer) {
+                for (const token of returnPlayer.querySelectorAll(".mur-token-container .mur-token")) {
+                    this.animateJump(token, 700);
+                }
+            }
+        }
+        this.animateTiles(moves);
     },
 
     animateSword(playerId) {
@@ -1279,6 +1344,9 @@ define([
     roundCleanup() {
         this.gamedatas.inspections = [];
         this.gamedatas.questions = [];
+        for (const playerId of Object.keys(this.gamedatas.players)) {
+            this.gamedatas.players[playerId].voted = null;
+        }
 
         const deployedTiles = document.querySelectorAll(".mur-placeholder:not(.mur-inactive) .mur-tile");
         const moves = [];
@@ -1301,6 +1369,12 @@ define([
             this.animatePlayerRemove(
                 this.tokenTiles[parseInt(arrow.dataset.token)].player_id,
                 arrow);
+        }
+
+        for (const token of document.querySelectorAll(".mur-token-container .mur-token")) {
+            this.animatePlayerRemove(
+                this.tokenTiles[parseInt(token.dataset.token)].player_id,
+                token);
         }
     },
 
@@ -1422,28 +1496,11 @@ define([
         this.notifqueue.setSynchronous("vote", 1000);
 
         dojo.subscribe("appoint", this, () => {
-            for (const token of document.querySelectorAll(".mur-token-container .mur-token")) {
-                this.animatePlayerRemove(
-                    this.tokenTiles[parseInt(token.dataset.token)].player_id,
-                    token);
-            }
+
         });
 
         dojo.subscribe("move", this, data => {
-            const tile = document.getElementById(`mur-tile-${data.args.tileId}`);
-            const place = document.getElementById(`mur-placeholder-${data.args.position}`);
-            const moves = [{tile, place}];
-            const oldTile = place.firstElementChild;
-            if (oldTile) {
-                const returnPlace = tile.parentElement.classList.contains("mur-inactive") ?
-                    document.getElementById(`mur-tile-placeholder-${oldTile.dataset.id}`) :
-                    tile.parentElement;
-                moves.push({
-                    tile: oldTile,
-                    place: returnPlace
-                })
-            }
-            this.animateTiles(moves);
+            this.moveTile(data.args.tileId, data.args.position);
         });
 
         this.notifqueue.setSynchronous("order", 1000);
