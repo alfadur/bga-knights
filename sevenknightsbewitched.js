@@ -342,6 +342,12 @@ define([
         this.questionTiles = new Set();
         this.tokenTiles = Array(8).fill(null);
         this.activeDialog = null;
+
+        try {
+            this.useOffsetAnimation = CSS.supports("offset-path", "path('M 0 0')");
+        } catch (e) {
+            this.useOffsetAnimation = false;
+        }
     },
 
     setup(data) {
@@ -1278,6 +1284,36 @@ define([
         return false;
     },
 
+    castBewitching() {
+        const tile = document.querySelector(`#mur-player-${this.getCurrentPlayerId()} .mur-tile`);
+        if (tile) {
+            const flash = createElement(tile, `<div class="mur-flash"></div>`);
+            setTimeout(() => flash.classList.add("mur-animated"), 10);
+
+            let sparks = [];
+            if (this.useOffsetAnimation) {
+                setTimeout(() => {
+                    sparks = Array(12).fill(null).map(() => {
+                        const size = 8 * (1 + Math.random());
+                        const shiftX = (1 + 0.4 * Math.random()) * (Math.random() >= 0.5 ? size : -size);
+                        const shiftY = (1 + 0.4 * Math.random()) * -size;
+                        const path = `path('M0,0q${shiftX},${shiftY} 0,${shiftY * 2} t0,${shiftY * 2}')`;
+                        const style = `--x: ${Math.random()}; --y: ${Math.random()}; --size: ${size}; --path: ${path}`;
+                        const html = `<div class="mur-spark fa6-solid fa6-heart" style="${style}"></div>`;
+                        return createElement(tile, html);
+                    });
+                }, 50);
+            }
+
+            setTimeout(() => {
+                tile.removeChild(flash);
+                for (const spark of sparks) {
+                    tile.removeChild(spark);
+                }
+            }, 2500);
+        }
+    },
+
     moveTile(tileId, position) {
         const tile = document.getElementById(`mur-tile-${tileId}`);
         const place = document.getElementById(`mur-placeholder-${position}`);
@@ -1458,6 +1494,10 @@ define([
             console.log(data);
             const delay = this.revealCharacter(data.args.tileId, data.args.character) ? 1000 : 0;
             this.notifqueue.setSynchronousDuration(delay);
+
+            if (data.args.bewitch) {
+                setTimeout(() => this.castBewitching(), 1000);
+            }
         });
         this.notifqueue.setSynchronous("reveal");
 

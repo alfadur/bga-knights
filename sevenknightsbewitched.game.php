@@ -327,6 +327,7 @@ class SevenKnightsBewitched extends Table
             'tokenIcon' => "tile,$tileId",
             'tileId' => $tileId,
             'character' => $character,
+            'bewitch' => $character === 0,
             'numberIcon' => $character === 0 ? $character : (1 << ($character - 1)),
             'preserve' => ['numberIcon', 'tokenIcon']
         ]);
