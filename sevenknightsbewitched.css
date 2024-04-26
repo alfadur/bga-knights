@@ -52,14 +52,44 @@
     background: #d2bf8e8f;
 }
 
-.mur-player-name {
+.mur-player-name-container {
     position: absolute;
     width: 100%;
     margin: auto;
+    display: flex;
+    flex-flow: row nowrap;
+    justify-content: center;
+}
+
+.mur-player-name {
+    position: relative;
     font-weight: bold;
     font-size: 16px;
-    text-align: center;
     -webkit-text-stroke: 1px #0005;
+}
+
+.mur-star {
+    --star-size: 26px;
+
+    position: absolute;
+    left: calc(-8px - var(--star-size));
+    top: calc(var(--star-size) / -6);
+    width: var(--star-size);
+    height: var(--star-size);
+
+    font-size: var(--star-size);
+    -webkit-text-stroke: 2px #60491d;
+
+    opacity: 0;
+
+    transform: translateY(calc(var(--star-size) * -1)) rotate(360deg) scale(1.5);
+    transform-origin: 50% 56%;
+    transition: opacity 600ms linear, transform 600ms ease-in;
+}
+
+.mur-star.mur-active {
+    opacity: 1;
+    transform: none;
 }
 
 .mur-tile-container {
@@ -538,7 +568,6 @@
     flex-shrink: 0;
     width: var(--card-width);
     height: var(--card-height);
-    border-radius: calc(var(--card-height) / 8);
     box-shadow: 0 1px 2px black;
 }
 

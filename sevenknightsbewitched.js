@@ -69,8 +69,14 @@ function createPlayer(index, angle, player) {
 
     const id = player ? player.id : "none";
     const token = player ? player.token : "none";
+    const captainClass = (player && player.isCaptain) ? "mur-star mur-active" : "mur-star";
     const name = player ?
-        `<div class="mur-player-name" style="color: #${player.color}">${player.name}</div>` :
+        `<div class="mur-player-name-container">
+            <div class="mur-player-name" style="color: #${player.color}">
+                <div class="${captainClass} fa6-solid fa6-star"></div>
+                ${player.name}
+            </div>
+        </div>` :
         "";
 
     return `<div id="mur-player-${id}" class="mur-player" style="${style}" data-player="${id}" data-token="${token}">
@@ -402,6 +408,11 @@ define([
         const players = data.players;
         const playerIds = Object.keys(players);
         const playerCount = playerIds.length;
+
+        const captain = players[data.captain];
+        if (captain) {
+            captain.isCaptain = true;
+        }
 
         const playArea = document.getElementById("mur-play-area");
 
@@ -1399,6 +1410,11 @@ define([
                 this.tokenTiles[parseInt(token.dataset.token)].player_id,
                 token);
         }
+
+        const star = document.querySelector(".mur-star.mur-active");
+        if (star) {
+            star.classList.remove("mur-active");
+        }
     },
 
     onPlayerClick(player) {
@@ -1517,8 +1533,11 @@ define([
         });
         this.notifqueue.setSynchronous("vote", 1000);
 
-        dojo.subscribe("appoint", this, () => {
-
+        dojo.subscribe("appoint", this, data => {
+            const star = document.querySelector(`#mur-player-${data.args.playerId} .mur-star`);
+            if (star) {
+                star.classList.add("mur-active");
+            }
         });
 
         dojo.subscribe("move", this, data => {

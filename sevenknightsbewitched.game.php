@@ -836,6 +836,7 @@ class SevenKnightsBewitched extends Table
 
         self::notifyAllPlayers('appoint', clienttranslate('${tokenIcon}${player_name} is appointed Captain'), [
             'player_name' => $playerName,
+            'playerId' => $captain,
             'tokenIcon' => "player,$playerName",
             'numberIcon' => $character === 0 ? $character : (1 << ($character - 1)),
             'preserve' => ['tokenIcon', 'numberIcon']
