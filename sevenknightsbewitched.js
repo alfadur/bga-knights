@@ -263,23 +263,27 @@ function createNotesDialog(numberCount, isCoop, tokens, questions, inspections) 
 
     return `<div>
         <div class="mur-notes">
-            <div class="mur-notes-table">
-                <div class="mur-notes-row">${header.join("")}</div>
-                ${rows.join("")}
-            </div>          
-            <div class="mur-notes-tools">
-                ${tools.join("")}
+            <div class="mur-notes-editor">
+                <div class="mur-notes-table">
+                    <div class="mur-notes-row">${header.join("")}</div>
+                    ${rows.join("")}
+                </div>          
+                <div class="mur-notes-tools">
+                    ${tools.join("")}
+                </div>
             </div>
-            <div class="mur-notes-questions">
-                ${questionRows.join("")}
-            </div>     
-            <div class="mur-notes-inspections">
-                <svg class="mur-inspections-svg" viewBox="-1 -1 2 2">
-                    ${inspectionArrows.map(a => a.back).join("")}
-                    ${inspectionArrows.map(a => a.front).join("")}
-                </svg>
-                ${inspectionTokens.join("")}
-            </div>         
+            <div class="mur-notes-reference">
+                <div class="mur-notes-questions">
+                    ${questionRows.join("")}
+                </div>     
+                <div class="mur-notes-inspections">
+                    <svg class="mur-inspections-svg" viewBox="-1 -1 2 2">
+                        ${inspectionArrows.map(a => a.back).join("")}
+                        ${inspectionArrows.map(a => a.front).join("")}
+                    </svg>
+                    ${inspectionTokens.join("")}
+                </div>
+            </div>                     
         </div>      
     </div>`;
 }
@@ -1288,7 +1292,7 @@ define([
         const tile = document.querySelector(`#mur-player-${this.getCurrentPlayerId()} .mur-tile`);
         if (tile) {
             const flash = createElement(tile, `<div class="mur-flash"></div>`);
-            setTimeout(() => flash.classList.add("mur-animated"), 10);
+            setTimeout(() => flash.classList.add("mur-animated"), 800);
 
             let sparks = [];
             if (this.useOffsetAnimation) {
@@ -1302,7 +1306,7 @@ define([
                         const html = `<div class="mur-spark fa6-solid fa6-heart" style="${style}"></div>`;
                         return createElement(tile, html);
                     });
-                }, 50);
+                }, 850);
             }
 
             setTimeout(() => {
@@ -1310,7 +1314,7 @@ define([
                 for (const spark of sparks) {
                     tile.removeChild(spark);
                 }
-            }, 2500);
+            }, 3500);
         }
     },
 
@@ -1496,7 +1500,7 @@ define([
             this.notifqueue.setSynchronousDuration(delay);
 
             if (data.args.bewitch) {
-                setTimeout(() => this.castBewitching(), 1000);
+                this.castBewitching();
             }
         });
         this.notifqueue.setSynchronous("reveal");

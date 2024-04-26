@@ -981,7 +981,15 @@
     gap: 8px;
 }
 
-.nur-notes-table {
+.mur-notes-editor {
+    display: flex;
+    flex-flow: row nowrap;
+    justify-content: center;
+    align-items: flex-start;
+    gap: 8px;
+}
+
+.mur-notes-table {
     display: flex;
     flex-flow: column nowrap;
     justify-content: start;
@@ -1060,6 +1068,7 @@
     --radius: 10px;
     display: flex;
     flex-flow: column nowrap;
+    margin-top: calc(var(--square-size) + 2px);
 }
 
 .mur-notes-tool {
@@ -1094,6 +1103,12 @@
 
 .mur-notes-tool:hover, .mur-notes-tool.mur-selected {
     font-size: 32px;
+}
+
+.mur-notes-reference {
+    display: flex;
+    flex-flow: column nowrap;
+    align-items: center;
 }
 
 .mur-notes-questions {
