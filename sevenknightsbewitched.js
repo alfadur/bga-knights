@@ -340,7 +340,6 @@ define([
     "ebg/counter"
 ], (dojo, declare) => declare(`bgagame.${gameName}`, ebg.core.gamegui, {
     constructor() {
-        console.log(`${gameName} constructor`);
         this.selectedTile = null;
         this.selectedPlayer = null;
         this.questionTiles = new Set();
@@ -355,8 +354,6 @@ define([
     },
 
     setup(data) {
-        console.log("Starting game setup");
-
         this.gameMode = parseInt(data.mode);
         this.isCoop = parseInt(data.coop);
         this.round = parseInt(data.round);
@@ -397,7 +394,6 @@ define([
             } else {
                 place.addEventListener("click", event => {
                     event.stopPropagation();
-                    console.log("Place click");
                     this.onPlaceholderClick(place);
                 });
             }
@@ -428,7 +424,6 @@ define([
             if (player) {
                 playerArea.addEventListener("click", event => {
                     event.stopPropagation();
-                    console.log("Player click");
                     this.onPlayerClick(player);
                 });
             }
@@ -501,10 +496,8 @@ define([
                 tile = createElement(tileSpace, createTile(descriptor, token));
             }
 
-            console.log("New tile", tile);
             tile.addEventListener("click", event => {
                 event.stopPropagation();
-                console.log("Tile click", tile);
                 this.onTileClick(tile);
             });
         }
@@ -527,13 +520,9 @@ define([
         }
 
         this.setupNotifications();
-
-        console.log("Ending game setup");
     },
 
     onEnteringState(stateName, state) {
-        console.log(`Entering state: ${stateName}`);
-
         if (this.isCurrentPlayerActive()) {
             switch (stateName) {
                 case "inspect": {
@@ -603,8 +592,6 @@ define([
     },
 
     onLeavingState(stateName) {
-        console.log(`Leaving state: ${stateName}`);
-
         if (this.isCurrentPlayerActive()) {
             switch (stateName) {
                 case "clientSelectTiles":
@@ -640,8 +627,6 @@ define([
     },
 
     onUpdateActionButtons(stateName, args) {
-        console.log(`onUpdateActionButtons: ${stateName}`, args);
-
         if (this.isCurrentPlayerActive()) {
             switch (stateName) {
                 case "inspect": {
@@ -761,7 +746,6 @@ define([
     },
 
     selectItem(item, property) {
-        console.log("Selecting", item);
         if (this[property]) {
             this[property].classList.remove("mur-selected");
         }
@@ -964,7 +948,6 @@ define([
 
         function reset() {
             const expression = document.querySelector(".mur-expression:not(.mur-icon)");
-            console.log(expression);
             expression.innerHTML = `<div class="mur-expression-slot" data-node="0">
                 <div class="mur-expression-wildcard"></div>
             </div>`;
@@ -1481,12 +1464,10 @@ define([
     },
 
     setupNotifications() {
-        console.log("notifications subscriptions setup");
         dojo.subscribe("round", this, () => this.roundCleanup());
         this.notifqueue.setSynchronous('round', 800);
 
         dojo.subscribe("inspect", this, data => {
-            console.log(data);
             this.gamedatas.inspections.push({
                 player_id: data.args.playerId,
                 tile_id: data.args.tileId,
@@ -1495,7 +1476,6 @@ define([
         });
 
         dojo.subscribe("reveal", this, data => {
-            console.log(data);
             const delay = this.revealCharacter(data.args.tileId, data.args.character) ? 1000 : 0;
             this.notifqueue.setSynchronousDuration(delay);
 
@@ -1506,7 +1486,6 @@ define([
         this.notifqueue.setSynchronous("reveal");
 
         dojo.subscribe("question", this, data => {
-            console.log(data);
             this.gamedatas.questions.push(data.args.question);
             if (this.isCoop) {
                 this.displayQuestion(data.args.question, 3000);
@@ -1525,7 +1504,6 @@ define([
         this.notifqueue.setSynchronous("answer", 1000);
 
         dojo.subscribe("vote", this, data => {
-            console.log(data);
             const tokens = [];
             let voters = parseInt(data.args.voters);
 
@@ -1550,7 +1528,6 @@ define([
         this.notifqueue.setSynchronous("order", 1000);
 
         dojo.subscribe("score", this, data => {
-            console.log(data);
             const args = data.args;
 
             if ("score" in args) {
@@ -1572,7 +1549,6 @@ define([
         this.notifqueue.setSynchronous("score", 1000);
 
         dojo.subscribe("round", this, data => {
-            console.log(data);
             ++this.round;
             const activeRoundMarker = document.querySelector(".mur-round-marker.mur-current");
 
@@ -1585,7 +1561,6 @@ define([
         });
 
         dojo.subscribe("notes", this, data => {
-            console.log(data);
             this.gamedatas.players[this.getCurrentPlayerId()].notes = data.args.notes;
 
             if (this.activeDialog !== null) {
@@ -1665,7 +1640,6 @@ define([
 
     formatExpression(expression, ...tiles) {
         const tokens = tiles.map(id => this.tokenTiles.indexOf(this.gamedatas.tiles.find(tile => tile.id === id)));
-        console.log("tokens", tokens);
         return createExpression(expression, tokens);
     },
 
