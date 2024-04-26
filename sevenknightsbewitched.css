@@ -1135,9 +1135,15 @@
     -webkit-text-stroke: 1px black;
 }
 
-.mur-notes-question .fa6-square-caret-right,
+.mur-notes-question .fa6-hand-point-right,
 .mur-notes-question .fa6-comment-dots {
-    color: #5e3817;
+    -webkit-text-stroke: 1px #0005;
+    font-size: 22px;
+    color: #534940;
+}
+
+.mur-notes-question .fa6-hand-point-right {
+    line-height: var(--square-size);
 }
 
 .mur-notes-question .fa6-question {

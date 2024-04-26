@@ -226,7 +226,7 @@ function createNotesDialog(numberCount, isCoop, tokens, questions, inspections) 
 
         return `<div class="mur-notes-question">
             ${createToken(question.player)}
-            <i class="fa6-regular fa6-square-caret-right"></i>            
+            <i class="fa6-regular fa6-hand-point-right"></i>            
             ${createToken(question.recipient)}
             <i class="fa6-regular fa6-comment-dots"></i>
             &nbsp;
