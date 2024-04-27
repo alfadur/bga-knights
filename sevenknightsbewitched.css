@@ -615,6 +615,26 @@
     background-position-x: calc(var(--card-width) * -1);
 }
 
+.mur-common-question {
+    padding: 20px 16px;
+    margin-bottom: 6px;
+    background-color: #f6e6c1;
+    border: 2px solid #4d7292;
+    border-radius: 8px;
+    font-size: 20px;
+    box-shadow: 0 1px 4px black;
+    transition: border-color ease-in 250ms;
+    text-align: center;
+}
+
+.mur-common-question .mur-token {
+    --token-size: 28px;
+}
+
+.mur-common-question:hover {
+    border-color: #ffdc53;
+}
+
 .mur-question-text {
     font-size: 20px;
 }

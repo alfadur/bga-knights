@@ -153,7 +153,7 @@ function createToken(token) {
 }
 
 function createExpression(expression, tokens, inline) {
-    const operators = {"p": "+", "e": "=", "l": "<"};
+    const operators = {"p": "+", "e": "=", "l": "<", "o": "|", "n": "&"};
     const nodes = [];
 
     for (const c of expression) {
@@ -166,25 +166,42 @@ function createExpression(expression, tokens, inline) {
         } else if (c in operators) {
             const [left, right] = nodes.splice(nodes.length - 2, 2);
             nodes.push({type: "operator", operator: operators[c], left, right});
+        } else {
+            nodes.push({type: "wildcard"});
         }
     }
 
+    function order(node, index) {
+        node.index = index;
+        return node.type === "operator" ?
+            order(node.right, order(node.left, index + 1) + 1) :
+            index;
+    }
+
+    order(nodes[0], 0);
+
     function generate(node) {
         if (node.type === "token") {
-            return NodeGen.wrap(NodeGen.token(node.token, node.index));
+            return NodeGen.wrap(NodeGen.token(node.token), node.index);
         } else if (node.type === "number") {
-            return NodeGen.wrap(NodeGen.number(node.number));
-        } else {
+            return NodeGen.wrap(NodeGen.number(node.number), node.index);
+        } else if (node.type === "operator") {
             const parts = [
                 generate(node.left),
-                NodeGen.wrap(NodeGen.operator(node.operator)),
+                NodeGen.wrap(NodeGen.operator(node.operator), node.index),
                 generate(node.right)
             ];
             return parts.join("");
+        } else {
+            return NodeGen.wrap(NodeGen.wildcard(), node.index);
         }
     }
+
     const result = nodes.length > 0 ? generate(nodes[0]) : "";
-    return inline ? result : `<div class="mur-expression mur-icon">${result}</div>`;
+    return {
+        nodes,
+        html: inline ? result : `<div class="mur-expression mur-icon">${result}</div>`
+    }
 }
 
 function createNotesDialog(numberCount, isCoop, tokens, questions, inspections) {
@@ -220,7 +237,7 @@ function createNotesDialog(numberCount, isCoop, tokens, questions, inspections) 
 
     const questionRows = questions.map(question => {
         const questionContent = "expression" in question ?
-            createExpression(question.expression, question.tokens, true) :
+            createExpression(question.expression, question.tokens, true).html :
             `${createToken(question.tile)}
              ${NodeGen.wrap(NodeGen.operator("="))}
              ${question.numbers
@@ -307,18 +324,25 @@ function createQuestionDialog(numberCount) {
     </div>`;
 }
 
-function createMultiQuestionDialog() {
-    const questionText = _("Is the following true...");
-    return `<div>
-        <div class="mur-question-text">${questionText}</div>
-        <div class ="mur-expression"></div>
-        <div id="mur-question-dialog-buttons"></div>
+function createMultiQuestionDialog(header, questions) {
+    questions = questions.map((question, index) =>
+        `<div class="mur-common-question" data-index="${index}">${question}</div>`);
+    return `<div id="mur-question-dialog-content">
+        <div>
+            ${questions.join("")}
+        </div>
+        <div class="hidden">
+            <div class="mur-question-text">${header}</div>
+            <div class ="mur-expression"></div>
+            <div id="mur-question-dialog-buttons"></div>
+        </div>
     </div>`;
 }
 
 const NodeGen = {
-    wrap(content) {
-        return `<div class="mur-expression-slot">${content}</div>`;
+    wrap(content, nodeIndex) {
+        const nodeData = nodeIndex === undefined ? "" : ` data-node="${nodeIndex}"`;
+        return `<div class="mur-expression-slot"${nodeData}>${content}</div>`;
     },
 
     number(n) {
@@ -949,22 +973,77 @@ define([
     multiQuestionDialog(player, tiles) {
         tiles.sort((t1, t2) => parseInt(t1.dataset.id) - parseInt(t2.dataset.id));
         const tokens = tiles.map(tile => parseInt(tile.dataset.token));
-        const nodes = [{type: "wildcard"}];
+        const nodes = [];
+
+        const icons = {};
+        tiles.forEach((tile, index) =>
+            icons[`tokenIcon${index + 1}`] = `tile,${tile.dataset.id}`);
+
+        const questions = tiles.length === 2 ? [{
+                text: _("Is tile ${tokenIcon1} less than tile ${tokenIcon2}?"),
+                expression: "abl"
+            }, {
+                text: _("Is the sum of tiles ${tokenIcon1} and ${tokenIcon2} less than...?"),
+                expression: "abp?l"
+            }, {
+                text: _("Are tiles ${tokenIcon1} and ${tokenIcon2} next to each other?"),
+                expression: "ab1peba1peo"
+            }, {
+                text: _("Custom Question")
+            }
+        ] : [{
+                text: _("Is the sum of tiles ${tokenIcon1}, ${tokenIcon2} and ${tokenIcon3} greater than...?"),
+                expression: "?abcppl"
+            }, {
+                text: _("Custom Question")
+            }
+        ];
 
         const dialog = new ebg.popindialog();
         dialog.create("mur-question-dialog");
         dialog.setTitle(_("Choose a question"));
-        dialog.setContent(createMultiQuestionDialog());
+        dialog.setContent(createMultiQuestionDialog(_("Is the following true..."),
+            questions.map(question => this.format_string_recursive(question.text, icons))));
         dialog.show();
 
-        function reset() {
-            const expression = document.querySelector(".mur-expression:not(.mur-icon)");
-            expression.innerHTML = `<div class="mur-expression-slot" data-node="0">
-                <div class="mur-expression-wildcard"></div>
-            </div>`;
-            nodes.splice(0, nodes.length, {type: "wildcard"});
-            initWildcard(expression.querySelector(".mur-expression-wildcard"), 0);
-            askButton.classList.add("disabled");
+        const content = document.getElementById("mur-question-dialog-content");
+
+        for (const question of content.querySelectorAll(".mur-common-question")) {
+            question.addEventListener("mousedown", () => {
+                content.children[0].classList.add("hidden");
+                content.children[1].classList.remove("hidden");
+                reset(questions[parseInt(question.dataset.index)].expression);
+            });
+        }
+
+        function reset(expression) {
+            expression ||= "?";
+            const {nodes: newNodes, html} = createExpression(expression, tokens, true);
+
+            const linearNodes = [];
+
+            function linearize(node) {
+                linearNodes.push(node);
+                if (node.type === "operator") {
+                    node.left = linearize(node.left);
+                    node.right = linearize(node.right);
+                } else if (node.type === "token"){
+                    node.token = tokens.indexOf(node.token);
+                }
+                return node.index;
+            }
+            linearize(newNodes[0]);
+
+            nodes.splice(0, nodes.length, ...linearNodes);
+
+            const element = document.querySelector(".mur-expression:not(.mur-icon)");
+            element.innerHTML = html;
+
+            const wildcards = element.querySelectorAll(".mur-expression-wildcard");
+            for (const wildcard of wildcards) {
+                initWildcard(wildcard,nodes.length > 1 ? 1 : 0);
+            }
+            askButton.classList.toggle("disabled", wildcards.length > 0);
         }
 
         function ask() {
@@ -972,7 +1051,9 @@ define([
             const operators = {
                 "<": "l",
                 "=": "e",
-                "+": "p"
+                "+": "p",
+                "&": "n",
+                "|": "o"
             }
 
             function add(index) {
@@ -1002,15 +1083,20 @@ define([
         }
 
         this.addActionButton("mur-question-dialog-ask", _("Ask"), ask, "mur-question-dialog-buttons");
-        this.addActionButton("mur-question-dialog-reset", _("Reset"), reset, "mur-question-dialog-buttons", null, "gray");
+        this.addActionButton("mur-question-dialog-reset", _("Reset"), () => reset(), "mur-question-dialog-buttons", null, "gray");
 
         const askButton = document.getElementById("mur-question-dialog-ask");
         askButton.classList.add("disabled");
 
-        function generate(level) {
+        function generate(level, operator) {
             const result = [];
 
             if (level === 0) {
+                result.push(NodeGen.operator('&'));
+                result.push(NodeGen.operator('|'));
+            }
+
+            if (level === 0 || ["&", "|"].indexOf(operator) >= 0 ) {
                 result.push(NodeGen.operator('<'));
                 result.push(NodeGen.operator('='));
             } else {
@@ -1077,9 +1163,14 @@ define([
                         existingSelector.remove();
                     }
 
+                    const nodeIndex = parseInt(element.parentElement.dataset.node);
+                    const operatorNode = nodes.find(node =>
+                        node.type === "operator" && (node.left === nodeIndex || node.right === nodeIndex));
+                    const operator = operatorNode && operatorNode.operator;
+
                     const slot = event.target.parentElement;
                     const selector = createElement(slot,
-                        `<div class="mur-expression-selector">${generate(level)}</div>`);
+                        `<div class="mur-expression-selector">${generate(level, operator)}</div>`);
 
                     for (const item of selector.children) {
                         item.addEventListener("mousedown", event => {
@@ -1091,8 +1182,6 @@ define([
                 }
             });
         }
-
-        reset();
     },
 
     addBubble(player, content, timeout) {
@@ -1659,7 +1748,7 @@ define([
 
     formatExpression(expression, ...tiles) {
         const tokens = tiles.map(id => this.tokenTiles.indexOf(this.gamedatas.tiles.find(tile => tile.id === id)));
-        return createExpression(expression, tokens);
+        return createExpression(expression, tokens).html;
     },
 
     format_string_recursive(log, args) {

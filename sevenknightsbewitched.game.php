@@ -501,6 +501,10 @@ class SevenKnightsBewitched extends Table
                 $stack[] = array_pop($stack) === array_pop($stack);
             } else if ($c === ord('l')) {
                 $stack[] = array_pop($stack) > array_pop($stack);
+            } else if ($c === ord('o')) {
+                $stack[] = array_pop($stack) | array_pop($stack);
+            } else if ($c === ord('n')) {
+                $stack[] = array_pop($stack) & array_pop($stack);
             } else {
                 throw new BgaUserException("Invalid symbol: $expression[$i]");
             }
