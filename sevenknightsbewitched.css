@@ -709,8 +709,13 @@
     position: absolute;
     z-index: 100;
 
-    left: calc(50% - var(--bubble-width) / 2 - 30% * var(--cx) / 2);
-    top: calc(50% - 30% * var(--cy) / 2);
+    left: calc((100% - var(--player-size)) * (1 - var(--cx)) / 2 + var(--player-size) / 2 - var(--bubble-width) / 2);
+    top: calc((100% - var(--player-size)) * (1 - var(--cy)) / 2 + var(--player-size) / 2);
+}
+
+.mur-bubble-border, .mur-bubble-content {
+    left: calc(var(--player-size) * var(--cx) - 15px);
+    top: calc(var(--player-size) * var(--cy));
 }
 
 .mur-bubble-border {
@@ -733,10 +738,10 @@
 }
 
 .mur-bubble svg {
-    --size: 70px;
+    --size: 140px;
 
     position: absolute;
-    left: calc(var(--size) * -1);
+    left: calc(var(--size) * -1 - 15px);
     top: calc(var(--size) * -1);
     width: calc(100% + 30px + var(--size) * 2);
     height: calc(100% + var(--size) * 2);

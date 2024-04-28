@@ -1247,10 +1247,11 @@ define([
 
         const svg = bubble.querySelector("svg");
         const {width, height} = svg.getBoundingClientRect();
-        const cx = width - (cos + 1) * width / 2;
-        const cy = height - (sin + 1) * height / 2;
+        const playerSize = 200;
+        const px = playerSize * cos;
+        const py = playerSize * sin;
         const size = 15;
-        const path = `M${cx},${cy} L${width / 2 + sin * size},${height / 2 - cos * size} L${width / 2 - sin * size},${height / 2 + cos * size} Z`;
+        const path = `M${width / 2 + px / 4},${height / 2 + py / 4} L${width / 2 + px +  sin * size},${height / 2 + py - cos * size} L${width / 2 + px - sin * size},${height / 2 + py + cos * size} Z`;
         svg.firstElementChild.setAttribute("d", path);
         if (timeout !== undefined) {
             setTimeout(() => bubble.parentElement.removeChild(bubble), timeout);
