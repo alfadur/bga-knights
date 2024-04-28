@@ -1057,6 +1057,7 @@
 }
 
 .mur-notes-square, .mur-notes-tool {
+    position: relative;
     width: var(--square-size);
     height: var(--square-size);
     outline: dotted #7e6b27 4px;
@@ -1067,8 +1068,28 @@
 }
 
 .mur-notes-square.mur-inactive {
-    outline-color: darkgray;
+    background-image: repeating-linear-gradient(
+        135deg,
+        #0005 0,
+        #0005 2px,
+        transparent 2px,
+        transparent 6px
+    );
     pointer-events: none;
+}
+
+.mur-notes-square.mur-inactive::before {
+    display: block;
+    content: "";
+    position: absolute;
+    width: calc(var(--square-size) / 3);
+    height: calc(var(--square-size) / 3);
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    margin: auto;
+    background-color: #bdbdbd;
 }
 
 .mur-notes-square:hover, .mur-notes-tool:hover, .mur-notes-tool.mur-selected {

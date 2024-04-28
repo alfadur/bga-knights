@@ -217,9 +217,10 @@ function createNotesDialog(numberCount, isCoop, tokens, questions, inspections, 
     const header = numbers.map(n =>
         `<div class="mur-single-number" data-number="${n}"></div>`);
     const rows = tokens.map(token => {
-        const squares = numbers.map(_ => `<div class="mur-notes-square"></div>`);
+        const squares = numbers.map(n =>
+            `<div class="mur-notes-square" data-number="${typeof n === "number" ? n : 0}"></div>`);
 
-        return `<div class="mur-notes-row">
+        return `<div class="mur-notes-row" data-token="${token}">
             ${createToken(token)}
             ${squares.join("")}
         </div>`;
@@ -827,6 +828,7 @@ define([
 
         const players = Object.keys(this.gamedatas.players).map(id => this.gamedatas.players[id]);
         const firstPlayer = this.gamedatas.players[this.gamedatas.firstPlayer];
+        const currentPlayer = this.gamedatas.players[this.getCurrentPlayerId()];
 
         if (firstPlayer) {
             function sortKey(player) {
@@ -927,17 +929,29 @@ define([
             const value = notes[i] || 0;
             const squares = Array.from(row.querySelectorAll(".mur-notes-square"));
             squares.forEach((square, j) => {
-                square.dataset.mark = (value >> (squares.length - j - 1) * 2 & 0b11).toString();
-                square.addEventListener("mousedown", () => {
-                    const toolMode = parseInt(document.querySelector(".mur-notes-tool.mur-selected").dataset.mode);
-                    if (toolMode >= 0) {
-                        const value = parseInt(square.dataset.mark) === toolMode ? 0 : toolMode;
-                        square.dataset.mark = value.toString();
-                    } else {
-                        const mark = parseInt(square.dataset.mark) || 0;
-                        square.dataset.mark = ((mark + 1) % 4).toString();
-                    }
-                });
+                const fixed = row.dataset.token === currentPlayer.token &&
+                    this.tokenTiles[currentPlayer.token].character === square.dataset.number
+                    || inspections.some(([from, to]) =>
+                        from === currentPlayer.token
+                            && to === parseInt(row.dataset.token)
+                            && this.tokenTiles[to].character === square.dataset.number);
+
+                if (fixed) {
+                    square.dataset.mark = "1";
+                    square.classList.add("mur-inactive");
+                } else {
+                    square.dataset.mark = (value >> (squares.length - j - 1) * 2 & 0b11).toString();
+                    square.addEventListener("mousedown", () => {
+                        const toolMode = parseInt(document.querySelector(".mur-notes-tool.mur-selected").dataset.mode);
+                        if (toolMode >= 0) {
+                            const value = parseInt(square.dataset.mark) === toolMode ? 0 : toolMode;
+                            square.dataset.mark = value.toString();
+                        } else {
+                            const mark = parseInt(square.dataset.mark) || 0;
+                            square.dataset.mark = ((mark + 1) % 4).toString();
+                        }
+                    });
+                }
             });
         });
 
@@ -1391,6 +1405,10 @@ define([
     revealCharacter(tileId, character) {
         const tile = document.querySelector(`#mur-tile-${tileId}`);
         tile.style.setProperty("--character", character);
+
+        const descriptor = this.gamedatas.tiles.find(tile => tile.id === tileId.toString());
+        descriptor.character = character.toString();
+
         if (!tile.classList.contains("mur-flipped")) {
             tile.classList.add("mur-flipped");
             tile.dataset.character = character.toString();
@@ -1651,6 +1669,7 @@ define([
             while (voters !== 0) {
                 const token = 31 - Math.clz32(voters);
                 tokens.push(token);
+                this.gamedatas.players[this.tokenTiles[token].player_id].voted = data.args.playerId;
                 voters &= ~(1 << token);
             }
 

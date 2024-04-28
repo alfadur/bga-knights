@@ -186,11 +186,14 @@ class SevenKnightsBewitched extends Table
     protected function getAllDatas()
     {
         $currentPlayerId = self::getCurrentPlayerId();
+        $captain = self::getGameStateValue(Globals::CAPTAIN);
+        $hasCaptain = (int)$captain !== 0 ? 1 : 0;
 
         $players = self::getCollectionFromDb(<<<EOF
             SELECT player_id AS id, player_score AS score, 
                    player_name AS name, player_color AS color, 
-                   player_no AS no, token, voted,
+                   player_no AS no, token, 
+                   IF($hasCaptain, voted, NULL) AS voted,
                    IF(player_id = $currentPlayerId, notes, NULL) AS notes
             FROM player NATURAL JOIN player_status
             EOF);
@@ -210,7 +213,7 @@ class SevenKnightsBewitched extends Table
             'round' => self::getGameStateValue(Globals::ROUND),
             'wins' => self::getGameStateValue(Globals::TEAM_WINS),
             'firstPlayer' => self::getGameStateValue(Globals::FIRST_PLAYER),
-            'captain' => self::getGameStateValue(Globals::CAPTAIN),
+            'captain' => $captain,
         ];
     }
 
