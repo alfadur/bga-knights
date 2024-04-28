@@ -728,17 +728,18 @@ class SevenKnightsBewitched extends Table
     {
         $round = self::getGameStateValue(Globals::ROUND);
         $score = $round >= MAX_ROUNDS ? 7 : ($knightsWin ? 2 : 3);
-        $check = $knightsWin ? 'NOT' : '';
+        $check = $knightsWin ?
+            '(tile.player_id IS NULL OR tile.player_id <> player_status.player_id) AND inspection.player_id IS NULL' :
+            'tile.player_id = player_status.player_id OR inspection.player_id IS NOT NULL';
 
         $winners = self::getObjectListFromDb(<<<EOF
             SELECT player_status.player_id, player_status.token 
                  FROM player_status 
                     LEFT JOIN tile ON (tile.`character` = 0)
-                    LEFT JOIN inspection ON (inspection.tile_id = tile.tile_id)                    
-                 WHERE $check (tile.player_id IS NOT NULL
-                        AND tile.player_id = player_status.player_id 
-                    OR inspection.player_id IS NOT NULL 
-                        AND inspection.player_id = player_status.player_id) 
+                    LEFT JOIN inspection 
+                        ON (inspection.player_id = player_status.player_id 
+                            AND inspection.tile_id = tile.tile_id)                    
+                 WHERE $check 
             EOF);
 
         if (count($winners) > 0) {
