@@ -1084,7 +1084,12 @@ class SevenKnightsBewitched extends Table
             if ($stateName === 'deployKnights') {
                 $this->gamestate->jumpToState(State::NEXT_ROUND);
             } else {
-                self::incGamestateValue(Globals::ACTIONS_TAKEN, 1);
+                if ($stateName === 'answer') {
+                    $expectedAnswer = (int)self::getGameStateValue(Globals::ANSWER);
+                    $this->recordAnswer($activePlayer, $expectedAnswer & 0b1);
+                } else {
+                    self::incGamestateValue(Globals::ACTIONS_TAKEN, 1);
+                }
                 $this->gamestate->jumpToState(State::DISPATCH_ACTION);
             }
         } else if ($state['type'] === FsmType::MULTIPLE_PLAYERS) {
