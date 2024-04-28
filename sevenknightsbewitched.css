@@ -711,6 +711,32 @@
 
     left: calc((100% - var(--player-size)) * (1 - var(--cx)) / 2 + var(--player-size) / 2 - var(--bubble-width) / 2);
     top: calc((100% - var(--player-size)) * (1 - var(--cy)) / 2 + var(--player-size) / 2);
+
+    opacity: 0;
+    transition: opacity 250ms ease-out;
+    pointer-events: none;
+}
+
+.mur-bubble.mur-animated {
+    opacity: 1;
+    animation-name: mur-bubble-appear;
+    animation-duration: 500ms;
+    animation-timing-function: ease-out;;
+}
+
+@keyframes mur-bubble-appear {
+    0% {
+        opacity: 0.5;
+        transform: scale(0.7);
+    }
+    80% {
+        opacity: 1;
+        transform: scale(1.05);
+    }
+    100% {
+        opacity: 1;
+        transform: none;
+    }
 }
 
 .mur-bubble-border, .mur-bubble-content {
@@ -738,7 +764,7 @@
 }
 
 .mur-bubble svg {
-    --size: 140px;
+    --size: var(--player-size);
 
     position: absolute;
     left: calc(var(--size) * -1 - 15px);

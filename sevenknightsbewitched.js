@@ -675,8 +675,7 @@ define([
 
         switch (stateName) {
             case "answer": {
-                let bubble = document.querySelector(".mur-bubble");
-                bubble.parentElement.removeChild(bubble);
+                this.removeBubble(document.querySelector(".mur-bubble"));
                 break;
             }
         }
@@ -1253,8 +1252,17 @@ define([
         const size = 15;
         const path = `M${width / 2 + px / 4},${height / 2 + py / 4} L${width / 2 + px +  sin * size},${height / 2 + py - cos * size} L${width / 2 + px - sin * size},${height / 2 + py + cos * size} Z`;
         svg.firstElementChild.setAttribute("d", path);
+
+        setTimeout(() => bubble.classList.add("mur-animated"), 0);
         if (timeout !== undefined) {
-            setTimeout(() => bubble.parentElement.removeChild(bubble), timeout);
+            setTimeout(() => this.removeBubble(bubble), timeout);
+        }
+    },
+
+    removeBubble(bubble) {
+        if (bubble) {
+            bubble.classList.remove("mur-animated");
+            setTimeout(() => bubble.parentElement.removeChild(bubble), 250);
         }
     },
 
