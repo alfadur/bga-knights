@@ -204,7 +204,7 @@ function createExpression(expression, tokens, inline) {
     }
 }
 
-function createNotesDialog(numberCount, isCoop, tokens, questions, inspections) {
+function createNotesDialog(numberCount, isCoop, tokens, questions, inspections, votes) {
     function createToken(token) {
         return NodeGen.token(token, 0);
     }
@@ -260,29 +260,34 @@ function createNotesDialog(numberCount, isCoop, tokens, questions, inspections) 
         </div>`;
     });
 
-    const inspectionTokens = tokens.map((token, index) => {
+    const diagramTokens = tokens.map((token, index) => {
         const angle = index * 2 * Math.PI / tokens.length;
         const style = `--cx: ${Math.sin(angle)}; --cy: ${-Math.cos(angle)}`;
-        return `<div class="mur-inspection-token" style="${style}">${createToken(token)}</div>`;
+        return `<div class="mur-diagram-token" style="${style}">${createToken(token)}</div>`;
     });
 
-    const inspectionArrows = inspections.map(points => {
-        const [from, to] = points.map(p => {
-            const angle = tokens.findIndex(t => parseInt(t) === parseInt(p)) * 2 * Math.PI / tokens.length;
-            return {x: Math.sin(angle), y: -Math.cos(angle)};
+    function createArrows(arrows) {
+        return arrows.map(points => {
+            const [from, to] = points.map(p => {
+                const angle = tokens.findIndex(t => parseInt(t) === parseInt(p)) * 2 * Math.PI / tokens.length;
+                return {x: Math.sin(angle), y: -Math.cos(angle)};
+            });
+            const length = Math.sqrt(Math.pow(to.x - from.x, 2) + Math.pow(to.y - from.y, 2));
+            const dir = {
+                x: 0.25 * (to.x - from.x) / length,
+                y: 0.25 * (to.y - from.y) / length
+            }
+            const arrow = 0.3;
+            const path = `M${from.x + dir.x},${from.y + dir.y}L${to.x - dir.x},${to.y - dir.y}M${to.x - (1 + arrow) * dir.x - arrow * dir.y},${to.y - (1 + arrow) * dir.y + arrow * dir.x}L${to.x - dir.x},${to.y - dir.y}L${to.x - (1 + arrow) * dir.x + arrow * dir.y},${to.y - (1 + arrow) * dir.y - arrow * dir.x}`;
+            return {
+                back: `<path class="mur-path-back" d="${path}"></path>`,
+                front: `<path d="${path}"></path>`
+            };
         });
-        const length = Math.sqrt(Math.pow(to.x - from.x, 2) + Math.pow(to.y - from.y, 2));
-        const dir = {
-            x: 0.25 * (to.x - from.x) / length ,
-            y: 0.25 * (to.y - from.y) / length
-        }
-        const arrow = 0.3;
-        const path = `M${from.x + dir.x},${from.y + dir.y}L${to.x - dir.x},${to.y - dir.y}M${to.x - (1 + arrow) * dir.x - arrow * dir.y},${to.y - (1 + arrow) * dir.y + arrow * dir.x}L${to.x - dir.x},${to.y - dir.y}L${to.x - (1 + arrow) * dir.x + arrow * dir.y},${to.y - (1 + arrow) * dir.y - arrow * dir.x}`;
-        return {
-            back: `<path class="mur-path-back" d="${path}"></path>`,
-            front: `<path d="${path}"></path>`
-        };
-    });
+    }
+
+    const inspectionArrows = createArrows(inspections);
+    const votingArrows = createArrows(votes);
 
     return `<div>
         <div class="mur-notes">
@@ -300,11 +305,26 @@ function createNotesDialog(numberCount, isCoop, tokens, questions, inspections) 
                     ${questionRows.join("")}
                 </div>     
                 <div class="mur-notes-inspections">
-                    <svg class="mur-inspections-svg" viewBox="-1 -1 2 2">
+                    <div class="mur-diagram-icon">
+                        <i class="fa6-solid fa6-eye"></i>
+                    </div>
+                    <svg class="mur-diagram-svg" viewBox="-1 -1 2 2">
+                        <circle r="0.95"></circle>
                         ${inspectionArrows.map(a => a.back).join("")}
                         ${inspectionArrows.map(a => a.front).join("")}
                     </svg>
-                    ${inspectionTokens.join("")}
+                    ${diagramTokens.join("")}                    
+                </div>
+                <div class="mur-notes-votes hidden">
+                    <div class="mur-diagram-icon">
+                        <i class="fa6-solid fa6-star"></i>
+                    </div>
+                    <svg class="mur-diagram-svg" viewBox="-1 -1 2 2">
+                        <circle r="0.95"></circle>
+                        ${votingArrows.map(a => a.back).join("")}
+                        ${votingArrows.map(a => a.front).join("")}
+                    </svg>
+                    ${diagramTokens.join("")}                    
                 </div>
             </div>                     
         </div>      
@@ -865,10 +885,17 @@ define([
             return [from, to];
         });
 
+        const votes = Object.keys(this.gamedatas.players).map(playerId => {
+            const player = this.gamedatas.players[playerId];
+            if (player.voted) {
+                return [player.token, this.gamedatas.players[player.voted].token];
+            }
+        }).filter(vote => vote);
+
         const dialog = new ebg.popindialog();
         dialog.create("mur-notes-dialog");
         dialog.setTitle(_("Notes"));
-        dialog.setContent(createNotesDialog(numbersCount, this.isCoop, tokens, questions, inspections));
+        dialog.setContent(createNotesDialog(numbersCount, this.isCoop, tokens, questions, inspections, votes));
         dialog.bCloseIsHiding = true;
         dialog.onHide = () => {
             const values = [];
@@ -919,6 +946,15 @@ define([
             tool.addEventListener("mousedown", () => {
                 tools.forEach(other => other.classList.remove("mur-selected"));
                 tool.classList.add("mur-selected");
+            })
+        }
+
+        const diagrams = document.querySelectorAll(".mur-notes-inspections, .mur-notes-votes");
+        for (const diagram of diagrams) {
+            diagram.addEventListener("mousedown", () => {
+                for (const diagram of diagrams) {
+                    diagram.classList.toggle("hidden");
+                }
             })
         }
     },

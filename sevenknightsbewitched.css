@@ -298,6 +298,7 @@
     left: calc(100% * var(--x));
     top: calc(100% * var(--y));
 
+    font-size: calc(var(--size) * 1.5px);
     color: purple;
     -webkit-text-stroke: 2px #0005;
 
@@ -1158,6 +1159,7 @@
     display: flex;
     flex-flow: column nowrap;
     align-items: center;
+    gap: 6px;
 }
 
 .mur-notes-questions {
@@ -1208,17 +1210,43 @@
     color: #40c240;
 }
 
-.mur-notes-inspections {
+.mur-notes-inspections, .mur-notes-votes {
     --square-size: 36px;
     position: relative;
     width: calc(var(--square-size) * 7);
     height: calc(var(--square-size) * 7);
-    pointer-events: none;
 }
 
-.mur-inspection-token {
+.mur-diagram-icon {
     position: absolute;
-    inset: 0;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    margin: auto;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    -webkit-text-stroke: 1px #0005;
+    font-size: calc(var(--square-size) * 2);
+    color: #351e02;
+    opacity: 0.3;
+    transition: font-size 300ms ease-in, opacity 200ms ease-in-out, color 200ms ease-in-out;
+}
+
+.mur-notes-inspections:hover .mur-diagram-icon, .mur-notes-votes:hover .mur-diagram-icon {
+    font-size: calc(var(--square-size) * 3);
+    color: #814a06;
+    opacity: 1.0;
+    z-index: 2;
+}
+
+.mur-diagram-token {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
     margin: auto;
     transform: translate(
         calc((50% - var(--square-size) / 2) * var(--cx)),
@@ -1227,9 +1255,10 @@
     display: flex;
     justify-content: center;
     align-items: center;
+    pointer-events: none;
 }
 
-.mur-inspections-svg {
+.mur-diagram-svg {
     width: calc(100% - var(--square-size));
     height: calc(100% - var(--square-size));
     position: absolute;
@@ -1237,7 +1266,14 @@
     top: calc(var(--square-size) / 2);
 }
 
-.mur-inspections-svg path {
+.mur-diagram-svg circle {
+    stroke-width: 0.10;
+    stroke-dasharray: 0.01 0.02;
+    stroke: #d2c8b6;
+    fill: none;
+}
+
+.mur-diagram-svg path {
     stroke: #c6c6c6;
     stroke-width: 0.05;
     stroke-linecap: round;
@@ -1245,7 +1281,7 @@
     fill: none;
 }
 
-.mur-inspections-svg path.mur-path-back {
+.mur-diagram-svg path.mur-path-back {
     stroke: black;
     stroke-width: 0.1;
 }
