@@ -64,7 +64,7 @@ function createPlayer(index, angle, player) {
         const coords = [-Math.cos(radians), -Math.sin(radians)];
         style = `--index: ${index}; --cx: ${coords[0]}; --cy: ${coords[1]}`;
     } else {
-        style = `--cx: -0.75; --cy: -0.75`;
+        style = `--cx: -0.75; --cy: -0.85`;
     }
 
     const id = player ? player.id : "none";
