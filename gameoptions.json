@@ -1,0 +1,69 @@
+{
+  "100": {
+    "name": "Game Variant",
+    "default": "1",
+    "values": {
+      "1": {
+        "name": "Standard Rules",
+        "description": "Tiles are always sequential. The Witch is always present in competitive mode. Note: when starting Standard game with 3 players, \"Groping in the Dark\" variant will be used instead",
+        "tmdisplay": "Standard"
+      },
+      "2": {
+        "name": "Advanced Rules",
+        "description": "A random subset of tiles used each round. The Witch may or may not be present in competitive mode",
+        "tmdisplay": "Advanced",
+        "nobeginner": true
+      },
+      "3": {
+        "name": "Groping in the dark",
+        "description": "Game mode for 3 and 4 players. Two inspections per round for each player",
+        "tmdisplay": "Darkness"
+      }
+    },
+    "startcondition": {
+      "2": [
+        {
+          "type": "minplayers",
+          "value": 4,
+          "message": "This mode requires at least 4 players"
+        },
+        {
+          "type": "maxplayers",
+          "value": 7,
+          "message": "This mode cannot be played with 8 players"
+        }
+      ],
+      "3": [
+        {
+          "type": "maxplayers",
+          "value": 4,
+          "message": "This mode can only be played with 3 or 4 players"
+        }
+      ]
+    }
+  },
+  "101": {
+    "name": "Cooperative Game",
+    "default": "0",
+    "values": {
+      "0": {
+        "name": "Disabled"
+      },
+      "1": {
+        "name": "Enabled",
+        "tmdisplay": "Cooperative",
+        "description": "Cooperative game without the Witch",
+        "is_coop": true
+      }
+    },
+    "startcondition": {
+      "1": [
+        {
+          "type": "maxplayers",
+          "value": 7,
+          "message": "Cooperative mode cannot be played with 8 players"
+        }
+      ]
+    }
+  }
+}
