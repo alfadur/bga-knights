@@ -964,6 +964,7 @@ define([
 
         const diagrams = document.querySelectorAll(".mur-notes-inspections, .mur-notes-votes");
         for (const diagram of diagrams) {
+            diagram.style.setProperty("--player-color", `#${currentPlayer.color}`);
             diagram.addEventListener("mousedown", () => {
                 for (const diagram of diagrams) {
                     diagram.classList.toggle("hidden");

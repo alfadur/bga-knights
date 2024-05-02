@@ -1279,7 +1279,7 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    -webkit-text-stroke: 1px #0005;
+    -webkit-text-stroke: 2px #000a;
     font-size: calc(var(--square-size) * 2);
     color: #351e02;
     opacity: 0.3;
@@ -1288,7 +1288,7 @@
 
 .mur-notes-inspections:hover .mur-diagram-icon, .mur-notes-votes:hover .mur-diagram-icon {
     font-size: calc(var(--square-size) * 3);
-    color: #814a06;
+    color: var(--player-color);
     opacity: 1.0;
     z-index: 2;
 }
