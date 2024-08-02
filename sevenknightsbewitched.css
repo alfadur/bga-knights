@@ -1060,6 +1060,23 @@
     }
 }
 
+.mur-clear-button {
+    display: inline-block;
+    vertical-align: middle;
+    margin-left: 12px;
+    font-size: 30px;
+    color: #d89c78;
+    -webkit-text-stroke: 2px black;
+    transform-origin: center;
+    transition: transform 220ms ease-in, color 220ms ease-in;
+}
+
+.mur-clear-button:hover {
+    color: #e99e4f;
+    transform: scale(1.2);
+    cursor: pointer;
+}
+
 .mur-notes {
     --square-size: var(--selectable-size);
     --mark-color: #df941f;/* #ffdc53*/

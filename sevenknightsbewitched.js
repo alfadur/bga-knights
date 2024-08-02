@@ -916,9 +916,11 @@ define([
             }
         }).filter(vote => vote);
 
+        const clearButtonHtml = `<div class="mur-clear-button fa6-solid fa6-trash-can"></div>`
+
         const dialog = new ebg.popindialog();
         dialog.create("mur-notes-dialog");
-        dialog.setTitle(_("Notes"));
+        dialog.setTitle(_("Notes") + clearButtonHtml);
         dialog.setContent(createNotesDialog(numbersCount, this.isCoop, tokens, questions, inspections, votes));
         dialog.bCloseIsHiding = true;
         dialog.onHide = () => {
@@ -943,6 +945,29 @@ define([
         };
         dialog.show();
         this.activeDialog = dialog;
+
+        function toggleClearButton(init) {
+            clearButton.classList.toggle("fa6-trash-can", init);
+            return clearButton.classList.toggle("fa6-arrow-rotate-left", init === undefined ? undefined : !init);
+        }
+
+        const clearStore = new Map();
+
+        const clearButton = document.querySelector(".mur-clear-button");
+        clearButton.addEventListener("mousedown", () => {
+            if (toggleClearButton()) {
+                for (const square of document.querySelectorAll(".mur-notes-square")) {
+                    if (!square.classList.contains("mur-inactive")) {
+                        clearStore.set(square, square.dataset.mark);
+                        square.dataset.mark = 0;
+                    }
+                }
+            } else {
+                for (const [key, value] of clearStore) {
+                    key.dataset.mark = value;
+                }
+            }
+        });
 
         const notes = (this.gamedatas.players[this.getCurrentPlayerId()].notes || "").split(",");
         const rows = Array.from(document.querySelectorAll(".mur-notes-row"));
@@ -972,6 +997,7 @@ define([
                             const mark = parseInt(square.dataset.mark) || 0;
                             square.dataset.mark = ((mark + 1) % 4).toString();
                         }
+                        toggleClearButton(true);
                     });
                 }
             });
