@@ -974,12 +974,40 @@ define([
             }
         });
 
+        function editSquare(square, force) {
+            if (square.classList.contains("mur-inactive")) {
+                return;
+            }
+
+            const toolMode = parseInt(document.querySelector(".mur-notes-tool.mur-selected").dataset.mode);
+            if (toolMode >= 0) {
+                const value = parseInt(square.dataset.mark) === toolMode && !force ? 0 : toolMode;
+                square.dataset.mark = value.toString();
+            } else {
+                const mark = parseInt(square.dataset.mark) || 0;
+                square.dataset.mark = ((mark + 1) % 4).toString();
+            }
+            toggleClearButton(true);
+        }
+
         const notes = (this.gamedatas.players[this.getCurrentPlayerId()].notes || "").split(",");
         const rows = Array.from(document.querySelectorAll(".mur-notes-row"));
+        const columns = document.querySelectorAll(".mur-notes-row:first-child .mur-single-number");
+
+        for (const column of columns) {
+            const index = Array.prototype.indexOf.call(column.parentElement.children, column);
+            const squares = document.querySelectorAll(`.mur-notes-table .mur-notes-square:nth-child(${index + 2})`);
+            column.addEventListener("mousedown",
+                () => squares.forEach(square => editSquare(square, true)));
+        }
 
         rows.forEach((row, i) => {
             const value = notes[i] || 0;
             const squares = Array.from(row.querySelectorAll(".mur-notes-square"));
+
+            row.firstElementChild.addEventListener("mousedown",
+                () => squares.forEach(square => editSquare(square, true)));
+
             squares.forEach((square, j) => {
                 const fixed = row.dataset.token === currentPlayer.token &&
                     this.tokenTiles[currentPlayer.token].character === square.dataset.number
@@ -993,17 +1021,7 @@ define([
                     square.classList.add("mur-inactive");
                 } else {
                     square.dataset.mark = (value >> (squares.length - j - 1) * 2 & 0b11).toString();
-                    square.addEventListener("mousedown", () => {
-                        const toolMode = parseInt(document.querySelector(".mur-notes-tool.mur-selected").dataset.mode);
-                        if (toolMode >= 0) {
-                            const value = parseInt(square.dataset.mark) === toolMode ? 0 : toolMode;
-                            square.dataset.mark = value.toString();
-                        } else {
-                            const mark = parseInt(square.dataset.mark) || 0;
-                            square.dataset.mark = ((mark + 1) % 4).toString();
-                        }
-                        toggleClearButton(true);
-                    });
+                    square.addEventListener("mousedown", () => editSquare(square));
                 }
             });
         });
