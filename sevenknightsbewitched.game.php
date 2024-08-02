@@ -69,11 +69,6 @@ class SevenKnightsBewitched extends Table
             self::initStat('player', $stat, 0);
         }
 
-        $mode = (int)self::getGameStateValue(GameOption::MODE);
-        if ($mode === GameMode::STANDARD && count($players) === 3) {
-            self::setGameStateValue(GameOption::MODE, GameMode::DARKNESS);
-        }
-
         self::setupPlayers(self::loadPlayersBasicInfos(), $data['player_colors']);
         self::setupTiles();
 
