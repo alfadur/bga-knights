@@ -1337,6 +1337,11 @@
     pointer-events: none;
 }
 
+.mur-diagram-token.mur-diagram-token-errant .mur-token {
+    outline: 3px dashed black;
+    background-image: none;
+}
+
 .mur-diagram-svg {
     width: calc(100% - var(--square-size));
     height: calc(100% - var(--square-size));

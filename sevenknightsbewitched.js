@@ -204,7 +204,7 @@ function createExpression(expression, tokens, inline) {
     }
 }
 
-function createNotesDialog(numberCount, isCoop, tokens, questions, inspections, votes) {
+function createNotesDialog(numberCount, isCoop, tokens, errantTokens, questions, inspections, votes) {
     function createToken(token) {
         return NodeGen.token(token, 0);
     }
@@ -261,11 +261,14 @@ function createNotesDialog(numberCount, isCoop, tokens, questions, inspections, 
         </div>`;
     });
 
-    const diagramTokens = tokens.map((token, index) => {
-        const angle = index * 2 * Math.PI / tokens.length;
-        const style = `--cx: ${Math.sin(angle)}; --cy: ${-Math.cos(angle)}`;
-        return `<div class="mur-diagram-token" style="${style}">${createToken(token)}</div>`;
-    });
+    function createDiagramTokens(markErrant) {
+        return tokens.map((token, index) => {
+            const angle = index * 2 * Math.PI / tokens.length;
+            const style = `--cx: ${Math.sin(angle)}; --cy: ${-Math.cos(angle)}`;
+            const extraClass = markErrant && errantTokens.indexOf(token) >= 0 ? "mur-diagram-token-errant" : "";
+            return `<div class="mur-diagram-token ${extraClass}" style="${style}">${createToken(token)}</div>`;
+        })
+    }
 
     function createArrows(arrows) {
         return arrows.map(points => {
@@ -314,7 +317,7 @@ function createNotesDialog(numberCount, isCoop, tokens, questions, inspections, 
                         ${inspectionArrows.map(a => a.back).join("")}
                         ${inspectionArrows.map(a => a.front).join("")}
                     </svg>
-                    ${diagramTokens.join("")}                    
+                    ${createDiagramTokens(false).join("")}                    
                 </div>
                 <div class="mur-notes-votes hidden">
                     <div class="mur-diagram-icon">
@@ -325,7 +328,7 @@ function createNotesDialog(numberCount, isCoop, tokens, questions, inspections, 
                         ${votingArrows.map(a => a.back).join("")}
                         ${votingArrows.map(a => a.front).join("")}
                     </svg>
-                    ${diagramTokens.join("")}                    
+                    ${createDiagramTokens(true).join("")}                    
                 </div>
             </div>                     
         </div>      
@@ -847,6 +850,7 @@ define([
         const numbersCount = this.gameMode === GameMode.standard ?
             this.gamedatas.tiles.length + this.isCoop - 1 : 7;
         const tokens = [];
+        const errantTokens = [];
 
         const players = Object.keys(this.gamedatas.players).map(id => this.gamedatas.players[id]);
         const firstPlayer = this.gamedatas.players[this.gamedatas.firstPlayer];
@@ -861,6 +865,7 @@ define([
             this.tokenTiles.forEach((tile, token) => {
                 if (tile !== null && tile.player_id === null) {
                     tokens.push(token);
+                    errantTokens.push(token);
                 }
             });
         }
@@ -921,7 +926,7 @@ define([
         const dialog = new ebg.popindialog();
         dialog.create("mur-notes-dialog");
         dialog.setTitle(_("Notes") + clearButtonHtml);
-        dialog.setContent(createNotesDialog(numbersCount, this.isCoop, tokens, questions, inspections, votes));
+        dialog.setContent(createNotesDialog(numbersCount, this.isCoop, tokens, errantTokens, questions, inspections, votes));
         dialog.bCloseIsHiding = true;
         dialog.onHide = () => {
             const values = [];
