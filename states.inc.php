@@ -138,7 +138,10 @@ $machinestates = [
         Fsm::NAME => 'finalCheck',
         Fsm::TYPE => FsmType::GAME,
         Fsm::ACTION => 'stFinalCheck',
-        Fsm::TRANSITIONS => ['' => State::NEXT_ROUND]
+        Fsm::TRANSITIONS => [
+            'round' => State::NEXT_ROUND,
+            'review' => State::REVIEW
+        ]
     ],
 
     State::NEXT_ROUND => [
@@ -149,6 +152,18 @@ $machinestates = [
         Fsm::TRANSITIONS => [
             'continue' => State::INSPECT,
             'end' => State::GAME_END
+        ]
+    ],
+
+    State::REVIEW => [
+        Fsm::NAME => 'review',
+        Fsm::TYPE => FsmType::MULTIPLE_PLAYERS,
+        Fsm::DESCRIPTION => clienttranslate('Other players must confirm the end of the round'),
+        Fsm::OWN_DESCRIPTION => clienttranslate('${you} must confirm the end of the round'),
+        Fsm::ACTION => 'stMakeEveryoneActive',
+        Fsm::POSSIBLE_ACTIONS => ['confirm'],
+        Fsm::TRANSITIONS => [
+            '' => State::NEXT_ROUND,
         ]
     ],
 

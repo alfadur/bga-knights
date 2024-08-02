@@ -7,6 +7,8 @@ interface GameOption {
     const COOP_ID = 101;
     const FIXED_SCORE = 'fixed_score';
     const FIXED_SCORE_ID = 102;
+    const REVIEW = 'review';
+    const REVIEW_ID = 103;
 }
 
 interface GameMode {
@@ -47,6 +49,7 @@ interface State {
     const DEPLOY_KNIGHTS = 9;
     const FINAL_CHECK = 10;
     const NEXT_ROUND = 11;
+    const REVIEW = 12;
 
     const GAME_END = 99;
 }

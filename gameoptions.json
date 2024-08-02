@@ -83,5 +83,18 @@
         "description": "Winning the last round does not award extra points"
       }
     }
+  },
+  "103": {
+    "name": "Review Phase",
+    "values": {
+      "0": {
+        "name": "Disabled"
+      },
+      "1": {
+        "name": "Enabled",
+        "tmdisplay": "Review",
+        "description": "After each round players can compare their notes"
+      }
+    }
   }
 }

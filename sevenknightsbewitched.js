@@ -271,7 +271,7 @@ function createNotesDialog(numberCount, isCoop, tokens, questions, inspections, 
             const style = `--cx: ${Math.sin(angle)}; --cy: ${-Math.cos(angle)}`;
             const extraClass = tokens.errant.indexOf(token) >= 0 ? "mur-diagram-token-errant" : "";
             const firstMarker = index ? "" :
-                `<div class="mur-diagram-first-marker"></div>`
+                `<div class="mur-diagram-first-marker" style="--angle: ${angle.toFixed(4)}rad"></div>`
             return `<div class="mur-diagram-token ${extraClass}" style="${style}">${firstMarker}${createToken(token)}</div>`;
         })
     }
@@ -506,7 +506,11 @@ define([
             const panel = document.getElementById(`player_board_${playerId}`);
             const score = createElement(panel, createScore(playerId, player.token, this.round, data.fixedScore));
 
-            const cardsCount = data.gamestate.name === "gameEnd" ? 3 : this.round -1;
+            const cardsCount =
+                data.gamestate.name === "gameEnd" ? 3 :
+                data.gamestate.name === "review" ? this.round :
+                    this.round - 1;
+
             for (let i = 0; i < cardsCount; ++i) {
                 const card = score.children[i + 1];
                 const record = wins >> i * 9;
@@ -516,13 +520,13 @@ define([
                 card.dataset.team = (record & 1) ^ roundWon ? "witch" : "knights";
             }
 
-            if (playerId === this.getCurrentPlayerId().toString()) {
-                const notesButton = createElement(panel,
-                    `<div id="mur-notes-button" class="fa6-regular fa6-clipboard"></div>`);
-                notesButton.addEventListener("mousedown", () => this.notesDialog());
-            }
-        }
+            const notesVisible = playerId === this.getCurrentPlayerId().toString()
+                || data.hasReview && (data.gamestate.name === "review" || data.gamestate.name === "gameEnd");
 
+            const notesButton = createElement(panel,
+                `<div class="mur-notes-button fa6-regular fa6-clipboard  ${notesVisible ? "" : "hidden"}" data-owner="${playerId}"></div>`);
+            notesButton.addEventListener("mousedown", () => this.notesDialog(playerId));
+        }
         if (extraTiles.length) {
             const index = extraTiles.length === 1 ? areaCount - 1 : null
             createPlayerArea.call(this, null, index);
@@ -794,6 +798,12 @@ define([
                         .classList.toggle("disabled", !args.ready);
                     break;
                 }
+                case "review": {
+                    this.addActionButton("mur-confirm", _("Confirm"), () => {
+                        this.request("confirm", {});
+                    });
+                    break;
+                }
             }
 
             switch (stateName) {
@@ -852,7 +862,10 @@ define([
         return this.selectItem(tile, "selectedTile");
     },
 
-    notesDialog() {
+    notesDialog(playerId) {
+        const isEditable = playerId === this.getCurrentPlayerId().toString()
+            && !(this.gamedatas.hasReview && (this.gamedatas.gamestate.name === "review" || this.gamedatas.gamestate.name === "gameEnd"));
+
         const numbersCount = this.gameMode === GameMode.standard ?
             this.gamedatas.tiles.length + this.isCoop - 1 : 7;
         const tokens = {
@@ -936,7 +949,7 @@ define([
             }
         }).filter(vote => vote);
 
-        const clearButtonHtml = `<div class="mur-clear-button fa6-solid fa6-trash-can"></div>`
+        const clearButtonHtml = isEditable ? `<div class="mur-clear-button fa6-solid fa6-trash-can"></div>` : "";
 
         const dialog = new ebg.popindialog();
         dialog.create("mur-notes-dialog");
@@ -955,9 +968,11 @@ define([
                 values.push(value);
             }
 
-            const notes = values.join(",");
-            if (notes !== this.gamedatas.players[this.getCurrentPlayerId()].notes) {
-                this.request("updateNotes", {notes, lock: false});
+            if (isEditable) {
+                const notes = values.join(",");
+                if (notes !== this.gamedatas.players[this.getCurrentPlayerId()].notes) {
+                    this.request("updateNotes", {notes, lock: false});
+                }
             }
 
             dialog.destroy(1000);
@@ -966,28 +981,30 @@ define([
         dialog.show();
         this.activeDialog = dialog;
 
-        function toggleClearButton(init) {
-            clearButton.classList.toggle("fa6-trash-can", init);
-            return clearButton.classList.toggle("fa6-arrow-rotate-left", init === undefined ? undefined : !init);
-        }
+        if (isEditable) {
+            function toggleClearButton(init) {
+                clearButton.classList.toggle("fa6-trash-can", init);
+                return clearButton.classList.toggle("fa6-arrow-rotate-left", init === undefined ? undefined : !init);
+            }
 
-        const clearStore = new Map();
+            const clearStore = new Map();
 
-        const clearButton = document.querySelector(".mur-clear-button");
-        clearButton.addEventListener("mousedown", () => {
-            if (toggleClearButton()) {
-                for (const square of document.querySelectorAll(".mur-notes-square")) {
-                    if (!square.classList.contains("mur-inactive")) {
-                        clearStore.set(square, square.dataset.mark);
-                        square.dataset.mark = 0;
+            const clearButton = document.querySelector(".mur-clear-button");
+            clearButton.addEventListener("mousedown", () => {
+                if (toggleClearButton()) {
+                    for (const square of document.querySelectorAll(".mur-notes-square")) {
+                        if (!square.classList.contains("mur-inactive")) {
+                            clearStore.set(square, square.dataset.mark);
+                            square.dataset.mark = 0;
+                        }
+                    }
+                } else {
+                    for (const [key, value] of clearStore) {
+                        key.dataset.mark = value;
                     }
                 }
-            } else {
-                for (const [key, value] of clearStore) {
-                    key.dataset.mark = value;
-                }
-            }
-        });
+            });
+        }
 
         function editSquare(square, force) {
             if (square.classList.contains("mur-inactive")) {
@@ -1005,7 +1022,7 @@ define([
             toggleClearButton(true);
         }
 
-        const notes = (this.gamedatas.players[this.getCurrentPlayerId()].notes || "").split(",");
+        const notes = (this.gamedatas.players[playerId].notes || "").split(",");
         const rows = Array.from(document.querySelectorAll(".mur-notes-row"));
         const columns = document.querySelectorAll(".mur-notes-row:first-child .mur-single-number");
 
@@ -1031,11 +1048,12 @@ define([
                             && to === parseInt(row.dataset.token)
                             && this.tokenTiles[to].character === square.dataset.number);
 
-                if (fixed) {
-                    square.dataset.mark = "1";
+                const mark = (value >> (squares.length - j - 1) * 2 & 0b11).toString();
+                if (fixed || !isEditable) {
+                    square.dataset.mark = !isEditable ? mark : "1";
                     square.classList.add("mur-inactive");
                 } else {
-                    square.dataset.mark = (value >> (squares.length - j - 1) * 2 & 0b11).toString();
+                    square.dataset.mark = mark;
                     square.addEventListener("mousedown", () => editSquare(square));
                 }
             });
@@ -1560,11 +1578,11 @@ define([
         const place = document.getElementById(placeId);
         const moves = [{tile, place}];
 
-        const player = tile.closest(".mur-player");
+        const player = tile.closest(".mur-player") || place.closest(".mur-player");
 
         if (player) {
             for (const token of player.querySelectorAll(".mur-token-container .mur-token")) {
-                this.animateJump(token, 150);
+                this.animateJump(token, position === 0 ? 700 : 150);
             }
         }
 
@@ -1832,6 +1850,24 @@ define([
             }
 
             this.animateSword(data.args.firstPlayer);
+
+            const playerId = this.getCurrentPlayerId().toString();
+            for (const button of document.querySelectorAll(`.mur-notes-button`)) {
+                if (button.dataset.owner !== playerId) {
+                    this.gamedatas.players[playerId].notes = null;
+                    button.classList.add("hidden");
+                }
+            }
+        });
+
+        dojo.subscribe("review", this, data => {
+            for (const notes of data.args.notes) {
+                this.gamedatas.players[notes.id].notes = notes.notes;
+            }
+
+            for (const button of document.querySelectorAll(`.mur-notes-button`)) {
+                button.classList.remove("hidden");
+            }
         });
 
         dojo.subscribe("notes", this, data => {

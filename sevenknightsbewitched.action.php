@@ -107,6 +107,13 @@ class action_sevenknightsbewitched extends APP_GameAction
         $this->game->updateNotes($notes);
         self::ajaxResponse();
     }
+
+    public function confirm()
+    {
+        self::setAjaxMode();
+        $this->game->confirm();
+        self::ajaxResponse();
+    }
 }
   
 

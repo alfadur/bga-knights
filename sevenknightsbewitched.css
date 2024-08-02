@@ -1148,7 +1148,8 @@
     pointer-events: none;
 }
 
-.mur-notes-square.mur-inactive::before {
+.mur-notes-square.mur-inactive[data-mark="1"]::before,
+.mur-notes-square.mur-inactive[data-mark="2"]::before {
     display: block;
     content: "";
     position: absolute;
@@ -1374,7 +1375,7 @@
     top: 0;
     bottom: 0;
     margin: auto;
-    transform: rotate(110deg) translateY(6px) scaleX(1.4);
+    transform: rotate(calc(var(--angle) + 240deg)) translateY(6px) scaleX(1.4);
     z-index: -1;
 }
 
@@ -1415,7 +1416,7 @@
     stroke-width: 0.1;
 }
 
-#mur-notes-button {
+.mur-notes-button {
     position: absolute;
     right: 10px;
     bottom: 2px;
@@ -1426,12 +1427,16 @@
     z-index: 1;
 }
 
-#mur-notes-button:hover {
+.mur-notes-button.hidden {
+    display: none !important;
+}
+
+.mur-notes-button:hover {
     color: #c19c0a;
     transform: scale(1.15);
 }
 
-#mur-notes-button::after {
+.mur-notes-button::after {
     display: block;
     position: absolute;
     content: "\f044";

@@ -30,7 +30,8 @@ class SevenKnightsBewitched extends Table
 
             GameOption::MODE => GameOption::MODE_ID,
             GameOption::COOP => GameOption::COOP_ID,
-            GameOption::FIXED_SCORE => GameOption::FIXED_SCORE_ID
+            GameOption::FIXED_SCORE => GameOption::FIXED_SCORE_ID,
+            GameOption::REVIEW => GameOption::REVIEW_ID
         ]);
     }
 
@@ -171,17 +172,24 @@ class SevenKnightsBewitched extends Table
         return 33.3 * ($round - 1) + 33.3 * ($actionsTaken) / (1 + ($inspectsPerPlayer + 1) * $playersCount);
     }
 
-    function getTiles(int $currentPlayerId): array {
-        return self::getObjectListFromDb(<<<EOF
-            SELECT tile.player_id, tile.tile_id AS id, 
-               (CASE WHEN tile.player_id = $currentPlayerId
-                    OR inspection.tile_id IS NOT NULL
-                THEN tile.`character` END) AS `character`,
-                tile.deployment
-            FROM tile LEFT JOIN inspection
-                ON inspection.player_id = $currentPlayerId
-                    AND inspection.tile_id = tile.tile_id
-            EOF);
+    function getTiles(int $currentPlayerId, bool $show): array {
+        if ($show) {
+            return self::getObjectListFromDb(<<<EOF
+                SELECT player_id, tile_id AS id, `character`, deployment
+                FROM tile 
+                EOF);
+        } else {
+            return self::getObjectListFromDb(<<<EOF
+                SELECT tile.player_id, tile.tile_id AS id, 
+                   (CASE WHEN tile.player_id = $currentPlayerId
+                        OR inspection.tile_id IS NOT NULL
+                    THEN tile.`character` END) AS `character`,
+                    tile.deployment
+                FROM tile LEFT JOIN inspection
+                    ON inspection.player_id = $currentPlayerId
+                        AND inspection.tile_id = tile.tile_id
+                EOF);
+        }
     }
 
     protected function getAllDatas()
@@ -189,18 +197,26 @@ class SevenKnightsBewitched extends Table
         $currentPlayerId = self::getCurrentPlayerId();
         $captain = self::getGameStateValue(Globals::CAPTAIN);
         $fixed_score = (int)self::getGameStateValue(GameOption::FIXED_SCORE);
+        $review = (int)self::getGameStateValue(GameOption::REVIEW);
         $hasCaptain = (int)$captain !== 0 ? 1 : 0;
+
+        $state = (int)$this->gamestate->state_id();
+        $showNotes = $review !== 0 && ($state === State::REVIEW || $state === State::GAME_END);
+
+        $notesSelector = $showNotes ?
+            'notes' :
+            "IF(player_id = $currentPlayerId, notes, NULL) AS notes";
 
         $players = self::getCollectionFromDb(<<<EOF
             SELECT player_id AS id, player_score AS score, 
                    player_name AS name, player_color AS color, 
                    player_no AS no, token, 
                    IF($hasCaptain, voted, NULL) AS voted,
-                   IF(player_id = $currentPlayerId, notes, NULL) AS notes
+                   $notesSelector
             FROM player NATURAL JOIN player_status
             EOF);
 
-        $tiles = self::getTiles($currentPlayerId);
+        $tiles = self::getTiles($currentPlayerId, $showNotes || $state === State::GAME_END);
 
         $inspections = self::getObjectListFromDb('SELECT * FROM inspection');
         $questions = self::getObjectListFromDb('SELECT * FROM question');
@@ -216,7 +232,8 @@ class SevenKnightsBewitched extends Table
             'wins' => self::getGameStateValue(Globals::TEAM_WINS),
             'firstPlayer' => self::getGameStateValue(Globals::FIRST_PLAYER),
             'captain' => $captain,
-            'fixedScore' => $fixed_score !== 0
+            'fixedScore' => $fixed_score !== 0,
+            'hasReview' => $review !== 0
         ];
     }
 
@@ -718,12 +735,22 @@ class SevenKnightsBewitched extends Table
 
     function updateNotes(string $notes): void {
         if (!(self::isSpectator() || self::isCurrentPlayerZombie())) {
+            if ((int)$this->gamestate->state_id() === State::REVIEW) {
+                throw new BgaUserException('Notes are locked');
+            }
+
             $playerId = self::getCurrentPlayerId();
             self::DbQuery("UPDATE player SET notes = '$notes' WHERE player_id = $playerId");
             if (self::DbAffectedRow() !== 0) {
                 self::notifyPlayer($playerId, 'notes', '', ['notes' => $notes]);
             }
         }
+    }
+
+    function confirm()
+    {
+        self::checkAction('confirm');
+        $this->gamestate->setPlayerNonMultiactive(self::getCurrentPlayerId(), '');
     }
 
     static function isWitchTeam(int $playerId): int {
@@ -1020,7 +1047,23 @@ class SevenKnightsBewitched extends Table
 
         $this::applyScore($mistakeCount === 0);
 
-        $this->gamestate->nextState('');
+        $review = (int)self::getGameStateValue(GameOption::REVIEW);
+
+        if ($review) {
+            $notes = self::getObjectListFromDb(<<<EOF
+                SELECT player_id AS id, notes 
+                FROM player NATURAL JOIN player_status
+                EOF);
+            self::notifyAllPlayers('review',  '', [
+                'notes' => $notes
+            ]);
+        }
+
+        if ($review && self::getGameStateValue(Globals::ROUND) < MAX_ROUNDS) {
+            $this->gamestate->nextState('review');
+        } else {
+            $this->gamestate->nextState('round');
+        }
     }
 
     function stNextRound(): void
@@ -1139,5 +1182,17 @@ class SevenKnightsBewitched extends Table
     function __skipRound()
     {
         $this->gamestate->jumpToState(State::NEXT_ROUND);
+    }
+
+    function __getOrder()
+    {
+        $tiles = self::getObjectListFromDb("SELECT * FROM tile");
+        $string = [];
+        $args = [];
+        foreach ($tiles as $i => $tile) {
+            $string[] = "\${tokenIcon$i}: $tile[character]";
+            $args["tokenIcon$i"] = "tile,$tile[tile_id]";
+        }
+        self::notifyAllPlayers('message', implode(', ', $string), $args);
     }
 }
