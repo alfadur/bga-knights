@@ -646,16 +646,24 @@ class SevenKnightsBewitched extends Table
         $mode = (int)self::getGameStateValue(GameOption::MODE);
         $coop = (int)self::getGameStateValue(GameOption::COOP);
 
-        $playerCount = self::getPlayersNumber();
-        $remainingTiles = $mode === GameMode::STANDARD && $coop === 0 ? 1 : 0;
-        $positionsCount = $playerCount + $this->extraCharactersCount($playerCount) - $remainingTiles;
+        if ($position === 0) {
+            self::DbQuery(<<<EOF
+                UPDATE tile
+                SET tile.deployment = NULL
+                WHERE tile.tile_id = $tileId AND tile.deployment IS NOT NULL 
+                EOF);
+        } else {
+            $playerCount = self::getPlayersNumber();
+            $remainingTiles = $mode === GameMode::STANDARD && $coop === 0 ? 1 : 0;
+            $positionsCount = $playerCount + $this->extraCharactersCount($playerCount) - $remainingTiles;
 
-        self::DbQuery(<<<EOF
-            UPDATE tile INNER JOIN tile AS previous ON (previous.tile_id = $tileId)
-            SET tile.deployment = IF(tile.tile_id = $tileId, $position, previous.deployment)
-            WHERE tile.tile_id = $tileId OR tile.deployment = $position
-                AND $position <= $positionsCount 
-            EOF);
+            self::DbQuery(<<<EOF
+                UPDATE tile INNER JOIN tile AS previous ON (previous.tile_id = $tileId)
+                SET tile.deployment = IF(tile.tile_id = $tileId, $position, previous.deployment)
+                WHERE tile.tile_id = $tileId OR tile.deployment = $position
+                    AND $position <= $positionsCount 
+                EOF);
+        }
 
         if (self::DbAffectedRow() === 0) {
             throw new BgaUserException("Invalid position");
@@ -665,10 +673,14 @@ class SevenKnightsBewitched extends Table
             "SELECT player_id FROM tile WHERE tile_id = $tileId");
 
         if ($owner === null) {
-            $message = clienttranslate('${tokenIcon1}${player_name1} places ${tokenIcon2}Knight-errant\'s tile on position ${positionIcon}');
+            $message = $position === 0 ?
+                clienttranslate('${tokenIcon1}${player_name1} returns ${tokenIcon2}Knight-errant\'s tile back') :
+                clienttranslate('${tokenIcon1}${player_name1} places ${tokenIcon2}Knight-errant\'s tile on position ${positionIcon}');
             $ownerName = null;
         } else {
-            $message = clienttranslate('${tokenIcon1}${player_name1} places ${tokenIcon2}${player_name2}\'s tile on position ${positionIcon}');
+            $message = $position === 0 ?
+                clienttranslate('${tokenIcon1}${player_name1} returns ${tokenIcon2}${player_name2}\'s tile back') :
+                clienttranslate('${tokenIcon1}${player_name1} places ${tokenIcon2}${player_name2}\'s tile on position ${positionIcon}');
             $ownerName = self::getPlayerNameById($owner);
         }
 

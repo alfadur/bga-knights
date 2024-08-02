@@ -529,10 +529,16 @@ define([
         for (const descriptor of data.tiles) {
             const playerId = descriptor.player_id || "none";
             const container = document.querySelector(`#mur-player-${playerId} .mur-tile-container`);
+
             const tileSpace = createElement(container,
                 `<div id="mur-tile-placeholder-${descriptor.id}" class="mur-placeholder mur-inactive">
                         <div id="mur-tile-arrows-${descriptor.id}" class="mur-arrows"></div>
                     </div>`);
+
+            tileSpace.addEventListener("click", event => {
+                event.stopPropagation();
+                this.onPlaceholderClick(tileSpace);
+            });
 
             let token;
 
@@ -629,11 +635,28 @@ define([
                     break;
                 }
                 case "clientDeploy": {
-                    for (const space of document.querySelectorAll(".mur-placeholder:not(.mur-inactive)")) {
+                    const tileId = this.selectedTile.dataset.id;
+
+                    for (const space of document.querySelectorAll(`.mur-placeholder:not(.mur-inactive), #mur-tile-placeholder-${tileId}`)) {
                         if (this.selectedTile.parentElement !== space) {
                             space.classList.add("mur-selectable");
                         }
                     }
+
+                    for (const tile of document.querySelectorAll(".mur-tile-container .mur-tile")) {
+                        tile.classList.add("mur-selectable");
+                    }
+
+                    this.selectedTile.classList.add("mur-selectable");
+
+                    break;
+                }
+                case "clientDeployLoopback": {
+                    this.selectTile(state.args.nextTile);
+                    this.setClientState("clientDeploy", {
+                        descriptionmyturn: _("${you} must select a space for the tile"),
+                        possibleactions: ["clientDeploy"]
+                    });
                     break;
                 }
             }
@@ -1467,7 +1490,10 @@ define([
 
     moveTile(tileId, position) {
         const tile = document.getElementById(`mur-tile-${tileId}`);
-        const place = document.getElementById(`mur-placeholder-${position}`);
+        const placeId = position === 0 ?
+            `mur-tile-placeholder-${tile.dataset.id}` :
+            `mur-placeholder-${position}`;
+        const place = document.getElementById(placeId);
         const moves = [{tile, place}];
 
         const player = tile.closest(".mur-player");
@@ -1478,7 +1504,7 @@ define([
             }
         }
 
-        const oldTile = place.firstElementChild;
+        const oldTile = !place.closest(".mur-tile-container") && place.firstElementChild;
 
         if (oldTile) {
             const returnPlace = tile.parentElement.classList.contains("mur-inactive") ?
@@ -1618,6 +1644,17 @@ define([
                 descriptionmyturn: _("${you} must select a space for the tile"),
                 possibleactions: ["clientDeploy"]
             });
+        } else if (this.checkAction("clientDeploy", true)) {
+            if (this.selectedTile === tile) {
+                this.selectTile(null);
+                this.restoreServerGameState();
+            } else {
+                this.setClientState("clientDeployLoopback", {
+                    args: {
+                        nextTile: tile
+                    }
+                });
+            }
         }
     },
 
@@ -1626,7 +1663,7 @@ define([
             if (place.classList.contains("mur-selectable")) {
                 this.request("deploy", {
                     tileId: this.selectedTile.dataset.id,
-                    position: place.dataset.number
+                    position: place.dataset.number || 0
                 });
             }
         }

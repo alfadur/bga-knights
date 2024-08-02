@@ -440,6 +440,16 @@
     pointer-events: none;
 }
 
+.mur-tile-container .mur-placeholder {
+    outline-color: #7e6b2700;
+    transition: outline-color 200ms ease-in-out;
+}
+
+.mur-tile-container .mur-placeholder.mur-selectable {
+    outline: dotted #7e6b27 4px;
+    pointer-events: all;
+}
+
 #mur-deployment .mur-placeholder.mur-inactive {
     position: relative;
     z-index: -1;
