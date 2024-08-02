@@ -5,6 +5,8 @@ interface GameOption {
     const MODE_ID = 100;
     const COOP = 'coop';
     const COOP_ID = 101;
+    const FIXED_SCORE = 'fixed_score';
+    const FIXED_SCORE_ID = 102;
 }
 
 interface GameMode {

@@ -40,10 +40,10 @@ function getElementCenter(element) {
     }
 }
 
-function createScore(playerId, token, round) {
+function createScore(playerId, token, round, fixedScore) {
     function createScoreCard(index) {
         const data = index < round - 1 ? `data-team=""` : "";
-        const extraClass = index >= 2 ? "mur-last-round" : "";
+        const extraClass = index >= 2 && !fixedScore ? "mur-last-round" : "";
         return `<div class="mur-score-card ${extraClass}" style="z-index: ${2 - index}" ${data}></div>`;
     }
 
@@ -504,7 +504,7 @@ define([
 
             createPlayerArea.call(this, player, index);
             const panel = document.getElementById(`player_board_${playerId}`);
-            const score = createElement(panel, createScore(playerId, player.token, this.round));
+            const score = createElement(panel, createScore(playerId, player.token, this.round, data.fixedScore));
 
             const cardsCount = data.gamestate.name === "gameEnd" ? 3 : this.round -1;
             for (let i = 0; i < cardsCount; ++i) {

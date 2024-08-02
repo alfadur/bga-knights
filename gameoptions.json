@@ -1,7 +1,6 @@
 {
   "100": {
     "name": "Game Variant",
-    "default": "1",
     "values": {
       "1": {
         "name": "Standard Rules",
@@ -21,6 +20,13 @@
       }
     },
     "startcondition": {
+      "1": [
+        {
+          "type": "minplayers",
+          "value": 4,
+          "message": "This mode requires at least 4 players"
+        }
+      ],
       "2": [
         {
           "type": "minplayers",
@@ -44,7 +50,6 @@
   },
   "101": {
     "name": "Cooperative Game",
-    "default": "0",
     "values": {
       "0": {
         "name": "Disabled"
@@ -64,6 +69,19 @@
           "message": "Cooperative mode cannot be played with 8 players"
         }
       ]
+    }
+  },
+  "102": {
+    "name": "Fixed Score",
+    "values": {
+      "0": {
+        "name": "Disabled"
+      },
+      "1": {
+        "name": "Enabled",
+        "tmdisplay": "Fixed Score",
+        "description": "Winning the last round does not award extra points"
+      }
     }
   }
 }

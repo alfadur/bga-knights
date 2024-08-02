@@ -29,7 +29,8 @@ class SevenKnightsBewitched extends Table
             Globals::TEAM_WINS => Globals::TEAM_WINS_ID,
 
             GameOption::MODE => GameOption::MODE_ID,
-            GameOption::COOP => GameOption::COOP_ID
+            GameOption::COOP => GameOption::COOP_ID,
+            GameOption::FIXED_SCORE => GameOption::FIXED_SCORE_ID
         ]);
     }
 
@@ -187,6 +188,7 @@ class SevenKnightsBewitched extends Table
     {
         $currentPlayerId = self::getCurrentPlayerId();
         $captain = self::getGameStateValue(Globals::CAPTAIN);
+        $fixed_score = (int)self::getGameStateValue(GameOption::FIXED_SCORE);
         $hasCaptain = (int)$captain !== 0 ? 1 : 0;
 
         $players = self::getCollectionFromDb(<<<EOF
@@ -214,6 +216,7 @@ class SevenKnightsBewitched extends Table
             'wins' => self::getGameStateValue(Globals::TEAM_WINS),
             'firstPlayer' => self::getGameStateValue(Globals::FIRST_PLAYER),
             'captain' => $captain,
+            'fixedScore' => $fixed_score !== 0
         ];
     }
 
@@ -739,7 +742,8 @@ class SevenKnightsBewitched extends Table
     function applyScore(bool $knightsWin): void
     {
         $round = self::getGameStateValue(Globals::ROUND);
-        $score = $round >= MAX_ROUNDS ? 7 : ($knightsWin ? 2 : 3);
+        $fixed_score = (int)self::getGameStateValue(GameOption::FIXED_SCORE);
+        $score = $round >= MAX_ROUNDS && $fixed_score === 0 ? 7 : ($knightsWin ? 2 : 3);
         $check = $knightsWin ?
             '(tile.player_id IS NULL OR tile.player_id <> player_status.player_id) AND inspection.player_id IS NULL' :
             'tile.player_id = player_status.player_id OR inspection.player_id IS NOT NULL';

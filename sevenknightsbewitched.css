@@ -1374,7 +1374,7 @@
     top: 0;
     bottom: 0;
     margin: auto;
-    transform: rotate(-135deg) translateY(6px) scaleX(1.4);
+    transform: rotate(110deg) translateY(6px) scaleX(1.4);
     z-index: -1;
 }
 
