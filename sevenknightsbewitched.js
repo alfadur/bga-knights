@@ -204,7 +204,7 @@ function createExpression(expression, tokens, inline) {
     }
 }
 
-function createNotesDialog(numberCount, isCoop, tokens, errantTokens, questions, inspections, votes) {
+function createNotesDialog(numberCount, isCoop, tokens, questions, inspections, votes) {
     function createToken(token) {
         return NodeGen.token(token, 0);
     }
@@ -216,7 +216,7 @@ function createNotesDialog(numberCount, isCoop, tokens, errantTokens, questions,
 
     const header = numbers.map(n =>
         `<div class="mur-single-number" data-number="${n}"></div>`);
-    const rows = tokens.map(token => {
+    const rows = tokens.all.map(token => {
         const squares = numbers.map(n =>
             `<div class="mur-notes-square" data-number="${typeof n === "number" ? n : 0}"></div>`);
 
@@ -261,19 +261,25 @@ function createNotesDialog(numberCount, isCoop, tokens, errantTokens, questions,
         </div>`;
     });
 
-    function createDiagramTokens(markErrant) {
-        return tokens.map((token, index) => {
-            const angle = index * 2 * Math.PI / tokens.length;
+    function getTokenAngle(index) {
+        return (index - tokens.currentIndex) * 2 * Math.PI / tokens.all.length - Math.PI
+    }
+
+    function createDiagramTokens() {
+        return tokens.all.map((token, index) => {
+            const angle = getTokenAngle(index);
             const style = `--cx: ${Math.sin(angle)}; --cy: ${-Math.cos(angle)}`;
-            const extraClass = markErrant && errantTokens.indexOf(token) >= 0 ? "mur-diagram-token-errant" : "";
-            return `<div class="mur-diagram-token ${extraClass}" style="${style}">${createToken(token)}</div>`;
+            const extraClass = tokens.errant.indexOf(token) >= 0 ? "mur-diagram-token-errant" : "";
+            const firstMarker = index ? "" :
+                `<div class="mur-diagram-first-marker"></div>`
+            return `<div class="mur-diagram-token ${extraClass}" style="${style}">${firstMarker}${createToken(token)}</div>`;
         })
     }
 
     function createArrows(arrows) {
         return arrows.map(points => {
             const [from, to] = points.map(p => {
-                const angle = tokens.findIndex(t => parseInt(t) === parseInt(p)) * 2 * Math.PI / tokens.length;
+                const angle = getTokenAngle(tokens.all.findIndex(t => parseInt(t) === parseInt(p)));
                 return {x: Math.sin(angle), y: -Math.cos(angle)};
             });
             const length = Math.sqrt(Math.pow(to.x - from.x, 2) + Math.pow(to.y - from.y, 2));
@@ -317,7 +323,7 @@ function createNotesDialog(numberCount, isCoop, tokens, errantTokens, questions,
                         ${inspectionArrows.map(a => a.back).join("")}
                         ${inspectionArrows.map(a => a.front).join("")}
                     </svg>
-                    ${createDiagramTokens(false).join("")}                    
+                    ${createDiagramTokens().join("")}                    
                 </div>
                 <div class="mur-notes-votes hidden">
                     <div class="mur-diagram-icon">
@@ -328,7 +334,7 @@ function createNotesDialog(numberCount, isCoop, tokens, errantTokens, questions,
                         ${votingArrows.map(a => a.back).join("")}
                         ${votingArrows.map(a => a.front).join("")}
                     </svg>
-                    ${createDiagramTokens(true).join("")}                    
+                    ${createDiagramTokens().join("")}                    
                 </div>
             </div>                     
         </div>      
@@ -849,8 +855,11 @@ define([
     notesDialog() {
         const numbersCount = this.gameMode === GameMode.standard ?
             this.gamedatas.tiles.length + this.isCoop - 1 : 7;
-        const tokens = [];
-        const errantTokens = [];
+        const tokens = {
+            all: [],
+            errant: [],
+            currentIndex: 0
+        };
 
         const players = Object.keys(this.gamedatas.players).map(id => this.gamedatas.players[id]);
         const firstPlayer = this.gamedatas.players[this.gamedatas.firstPlayer];
@@ -861,11 +870,17 @@ define([
                 return (parseInt(player.no) - firstPlayer.no + players.length) % players.length;
             }
             players.sort((p1, p2) => sortKey(p1) - sortKey(p2));
-            tokens.push(...players.map(player => player.token));
+
+            const currentIndex = players.findIndex(player => player.token === currentPlayer.token);
+            if (currentIndex >= 0) {
+                tokens.currentIndex = currentIndex;
+            }
+
+            tokens.all.push(...players.map(player => player.token));
             this.tokenTiles.forEach((tile, token) => {
                 if (tile !== null && tile.player_id === null) {
-                    tokens.push(token);
-                    errantTokens.push(token);
+                    tokens.all.push(token);
+                    tokens.errant.push(token);
                 }
             });
         }
@@ -926,7 +941,7 @@ define([
         const dialog = new ebg.popindialog();
         dialog.create("mur-notes-dialog");
         dialog.setTitle(_("Notes") + clearButtonHtml);
-        dialog.setContent(createNotesDialog(numbersCount, this.isCoop, tokens, errantTokens, questions, inspections, votes));
+        dialog.setContent(createNotesDialog(numbersCount, this.isCoop, tokens, questions, inspections, votes));
         dialog.bCloseIsHiding = true;
         dialog.onHide = () => {
             const values = [];

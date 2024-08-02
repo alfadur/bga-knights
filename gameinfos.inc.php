@@ -36,7 +36,7 @@ $gameinfos = [
 'suggest_player_number' => [5, 6],
 
 // Discourage players to play with these numbers of players. Must be null if there is no such advice.
-'not_recommend_player_number' => null,
+'not_recommend_player_number' => [3],
 // 'not_recommend_player_number' => array( 2, 3 ),      // <= example: this is not recommended to play this game with 2 or 3 players
 
 

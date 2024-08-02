@@ -1363,8 +1363,27 @@
     pointer-events: none;
 }
 
+.mur-diagram-first-marker {
+    position: absolute;
+    background-image: url("img/sword.png");
+    background-size: contain;
+    width: 25px;
+    height: 80px;
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: 0;
+    margin: auto;
+    transform: rotate(-135deg) translateY(6px) scaleX(1.4);
+    z-index: -1;
+}
+
 .mur-diagram-token.mur-diagram-token-errant .mur-token {
     outline: 3px dashed black;
+
+}
+
+.mur-notes-votes .mur-diagram-token.mur-diagram-token-errant .mur-token {
     background-image: none;
 }
 
