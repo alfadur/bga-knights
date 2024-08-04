@@ -825,10 +825,36 @@ class SevenKnightsBewitched extends Table
                 'preserve' => ['tokenIcons']
             ]);
         } else {
-            self::notifyAllPlayers('score', 'The Knights team loses, so no points are awarded', [
+            self::notifyAllPlayers('score', clienttranslate('The Knights team loses, so no points are awarded'), [
                 'knightsWin' => false,
             ]);
         }
+    }
+
+    function startReview(): bool
+    {
+        $review = (int)self::getGameStateValue(GameOption::REVIEW);
+
+        if ($review) {
+            $notes = self::getObjectListFromDb(<<<EOF
+                SELECT player_id AS id, notes 
+                FROM player NATURAL JOIN player_status
+                EOF);
+            self::notifyAllPlayers('review',  '', [
+                'notes' => $notes
+            ]);
+
+            $tiles = self::getObjectListFromDb(
+                'SELECT tile_id AS id, `character` FROM tile');
+            foreach ($tiles as $tile) {
+                self::notifyAllPlayers('reveal', '', [
+                    'tileId' => $tile['id'],
+                    'character' => $tile['character'],
+                    'instant' => true
+                ]);
+            }
+        }
+        return $review;
     }
 
     function determineAnswer(string $playerId, int $tileId, int $question): int
@@ -907,7 +933,6 @@ class SevenKnightsBewitched extends Table
                 ]);
             } else {
                 self::notifyAllPlayers('reveal', '', [
-                    'player_name' => $playerName,
                     'tileId' => $tileId,
                     'character' => $character,
                 ]);
@@ -935,7 +960,12 @@ class SevenKnightsBewitched extends Table
             }
 
             $this::applyScore(false);
-            $this->gamestate->nextState('end');
+
+            if ($this->startReview() && self::getGameStateValue(Globals::ROUND) < MAX_ROUNDS) {
+                $this->gamestate->nextState('review');
+            } else {
+                $this->gamestate->nextState('end');
+            }
         } else {
             $this->gamestate->nextState('appoint');
         }
@@ -1047,19 +1077,7 @@ class SevenKnightsBewitched extends Table
 
         $this::applyScore($mistakeCount === 0);
 
-        $review = (int)self::getGameStateValue(GameOption::REVIEW);
-
-        if ($review) {
-            $notes = self::getObjectListFromDb(<<<EOF
-                SELECT player_id AS id, notes 
-                FROM player NATURAL JOIN player_status
-                EOF);
-            self::notifyAllPlayers('review',  '', [
-                'notes' => $notes
-            ]);
-        }
-
-        if ($review && self::getGameStateValue(Globals::ROUND) < MAX_ROUNDS) {
+        if ($this->startReview() && self::getGameStateValue(Globals::ROUND) < MAX_ROUNDS) {
             $this->gamestate->nextState('review');
         } else {
             $this->gamestate->nextState('round');
@@ -1186,7 +1204,7 @@ class SevenKnightsBewitched extends Table
 
     function __getOrder()
     {
-        $tiles = self::getObjectListFromDb("SELECT * FROM tile");
+        $tiles = self::getObjectListFromDb('SELECT * FROM tile');
         $string = [];
         $args = [];
         foreach ($tiles as $i => $tile) {

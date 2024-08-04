@@ -1764,10 +1764,11 @@ define([
         });
 
         dojo.subscribe("reveal", this, data => {
-            const delay = this.revealCharacter(data.args.tileId, data.args.character) ? 1000 : 0;
+            const args = data.args;
+            const delay = this.revealCharacter(args.tileId, args.character) && !args.instant ? 1000 : 0;
             this.notifqueue.setSynchronousDuration(delay);
 
-            if (data.args.bewitch) {
+            if (args.bewitch) {
                 this.castBewitching();
             }
         });

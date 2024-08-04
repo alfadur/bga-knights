@@ -104,6 +104,7 @@ $machinestates = [
         Fsm::ACTION => 'stAppoint',
         Fsm::TRANSITIONS => [
             'appoint' => State::QUESTION,
+            'review' => State::REVIEW,
             'end' => State::NEXT_ROUND
         ]
     ],
