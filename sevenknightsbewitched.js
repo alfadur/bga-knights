@@ -1450,7 +1450,9 @@ define([
         const place = document.getElementById(`mur-tile-arrows-${tileId}`);
         const arrow = createElement(place,
             createArrow(this.gamedatas.players[playerId].token, place.childElementCount));
-        this.animatePlayerPlace(playerId, arrow);
+        if (!this.instantaneousMode) {
+            this.animatePlayerPlace(playerId, arrow);
+        }
     },
 
     animatePlayerRemove(ownerId, item) {
@@ -1532,7 +1534,9 @@ define([
 
             if (player) {
                 for (const token of player.querySelectorAll(".mur-token-container .mur-token")) {
-                    this.animateJump(token, 150);
+                    if (!this.instantaneousMode) {
+                        this.animateJump(token, 150);
+                    }
                 }
             }
             return true;
@@ -1776,7 +1780,7 @@ define([
 
         dojo.subscribe("question", this, data => {
             this.gamedatas.questions.push(data.args.question);
-            if (this.isCoop) {
+            if (this.isCoop && !this.instantaneousMode) {
                 this.displayQuestion(data.args.question, 3000);
             }
         });
@@ -1788,7 +1792,9 @@ define([
             const text = data.args.answer ? _("Yes") : _("No");
             const player = document.getElementById(`mur-player-${data.args.playerId}`);
             this.gamedatas.questions[this.gamedatas.questions.length - 1].answer = data.args.answer;
-            this.addBubble(player, text, 2000);
+            if (!this.instantaneousMode) {
+                this.addBubble(player, text, 2000);
+            }
         });
         this.notifqueue.setSynchronous("answer", 1000);
 
