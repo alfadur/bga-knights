@@ -863,7 +863,8 @@ define([
     },
 
     notesDialog(playerId) {
-        const isEditable = playerId === this.getCurrentPlayerId().toString()
+        const isEditable = !this.isSpectator
+            && playerId === this.getCurrentPlayerId().toString()
             && !(this.gamedatas.hasReview && (this.gamedatas.gamestate.name === "review" || this.gamedatas.gamestate.name === "gameEnd"));
 
         const numbersCount = this.gameMode === GameMode.standard ?
@@ -876,7 +877,9 @@ define([
 
         const players = Object.keys(this.gamedatas.players).map(id => this.gamedatas.players[id]);
         const firstPlayer = this.gamedatas.players[this.gamedatas.firstPlayer];
-        const currentPlayer = this.gamedatas.players[this.getCurrentPlayerId()];
+        const currentPlayer = this.isSpectator ?
+            this.gamedatas.players[Object.keys(this.gamedatas.players)[0]] :
+            this.gamedatas.players[this.getCurrentPlayerId()];
 
         if (firstPlayer) {
             function sortKey(player) {
