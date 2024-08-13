@@ -1861,10 +1861,10 @@ define([
 
             this.animateSword(data.args.firstPlayer);
 
-            const playerId = this.getCurrentPlayerId().toString();
+            const currentPlayerId = this.isSpectator ? null : this.getCurrentPlayerId().toString();
             for (const button of document.querySelectorAll(`.mur-notes-button`)) {
-                if (button.dataset.owner !== playerId) {
-                    this.gamedatas.players[playerId].notes = null;
+                if (button.dataset.owner !== currentPlayerId) {
+                    this.gamedatas.players[button.dataset.owner].notes = null;
                     button.classList.add("hidden");
                 }
             }
@@ -1881,6 +1881,10 @@ define([
         });
 
         dojo.subscribe("notes", this, data => {
+            if (this.isSpectator) {
+                return;
+            }
+
             this.gamedatas.players[this.getCurrentPlayerId()].notes = data.args.notes;
 
             if (this.activeDialog !== null) {
